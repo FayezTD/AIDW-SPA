@@ -9,6 +9,7 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 code {
@@ -23,11 +24,11 @@ code {
   }
   
   .chat-container {
-    @apply bg-gray-500 rounded-lg shadow-md p-4;
+    @apply bg-gray-500 rounded-lg shadow-md p-4 w-full max-w-full;
   }
   
   .message-bubble {
-    @apply rounded-lg p-3 my-2 max-w-3xl;
+    @apply rounded-lg p-3 my-2 max-w-full sm:max-w-3xl break-words;
   }
   
   .user-message {
@@ -74,4 +75,22 @@ code {
 .prose {
   max-width: 100%;
   overflow-wrap: break-word;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .message-bubble {
+    max-width: 90%;
+  }
+}
+
+@media (max-width: 480px) {
+  .message-bubble {
+    max-width: 95%;
+    padding: 0.5rem;
+  }
+  
+  .btn-primary {
+    @apply px-2 py-1 text-sm;
+  }
 }
