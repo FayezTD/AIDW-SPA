@@ -1,3 +1,4 @@
+/* eslint-disable no-template-curly-in-string */
 import React, { useState, useEffect } from 'react';
 
 const Sidebar = ({ onNewChat, activeChatId }) => {

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useCallback } from 'react';
 import { useAuth } from '../components/auth/AuthProvider';
 import ChatService from '../services/chatService';

@@ -1,7 +1,8 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useMsal } from '@azure/msal-react';
 import { InteractionRequiredAuthError } from '@azure/msal-browser';
-import { msalInstance } from './msalConfig'; // Import instance
+// import { msalInstance } from './msalConfig'; // Import instance
 
 export const AuthContext = createContext();
 

@@ -18,7 +18,7 @@ const ChatPage = () => {
     starterQuestions 
   } = useChat();
 
-  const { user, isAuthenticated, login } = useAuth();
+  const { isAuthenticated, login } = useAuth();
   
   const messagesEndRef = useRef(null);
 

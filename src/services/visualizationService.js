@@ -62,7 +62,7 @@ class VisualizationService {
       if (!text) return '';
       
       // Convert any **Text** that isn't already in a proper markdown format
-      const boldPattern = /\*\*(.*?)\*\*/g;
+      // const boldPattern = /\*\*(.*?)\*\*/g;
       let processedText = text;
       
       // Handle citations if they're in the text but not properly formatted
