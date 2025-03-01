@@ -6,27 +6,14 @@ import LoginPage from './pages/LoginPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AuthProvider } from './components/auth/AuthProvider';
 import { MsalProvider } from '@azure/msal-react';
-import { msalInstance } from './components/auth/msalConfig';
+import { msalInstance } from './components/auth/msalConfig';  // Import instance
 
 import './index.css';
 
-// Important: Custom history to avoid pushState issues with MSAL
-// This addresses the warning about history.pushState
 const App = () => {
-  // Handle potential redirect before router is initialized
-  React.useEffect(() => {
-    if (window.location.hash) {
-      console.log("Hash detected in App component");
-      msalInstance.handleRedirectPromise().catch(error => {
-        console.error("Error handling redirect in App:", error);
-      });
-    }
-  }, []);
-
   return (
-    <MsalProvider instance={msalInstance}>
+    <MsalProvider instance={msalInstance}>  {/* Wrap with MsalProvider */}
       <AuthProvider>
-        {/* Use Router instead of BrowserRouter to fix history issue */}
         <Router>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
