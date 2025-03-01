@@ -13,9 +13,9 @@ const ChatMessage = ({ message }) => {
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4 w-full`}>
-      <div className={`max-w-3xl w-full rounded-lg p-4 ${isUser ? 'bg-blue-400 text-white' : 'bg-gray-100'}`}>
+      <div className={`max-w-3xl w-full rounded-lg p-4 opacity-50 ${isUser ? 'bg-blue-400 text-white' : 'bg-gray-100'}`}>
         <div className="flex items-center mb-2">
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isUser ? 'bg-blue-400' : 'bg-blue-100'}`}>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isUser ? 'bg-blue-500' : 'bg-blue-100'}`}>
             {isUser ? 'U' : 'AI'}
           </div>
           <div className="ml-2 font-medium">{isUser ? 'You' : 'Assistant'}</div>
