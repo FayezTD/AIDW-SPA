@@ -11,14 +11,29 @@ export const msalConfig = {
     authority: `https://login.microsoftonline.com/${process.env.REACT_APP_AZURE_TENANT_ID}`, 
     redirectUri: process.env.REACT_APP_REDIRECT_URI || 'https://salmon-plant-0706ca50f.4.azurestaticapps.net',
     postLogoutRedirectUri: process.env.REACT_APP_REDIRECT_URI || 'https://salmon-plant-0706ca50f.4.azurestaticapps.net',
+    navigateToLoginRequestUrl: true,
   },
   cache: {
-    cacheLocation: 'sessionStorage', // Try changing to 'localStorage' if issues persist
-    storeAuthStateInCookie: true, // Helps with issues in Safari & incognito mode
+    cacheLocation: 'localStorage', // Changed from sessionStorage to localStorage
+    storeAuthStateInCookie: true, // This helps with IE11, Safari and issues with popups
   },
+  system: {
+    loggerOptions: {
+      loggerCallback: (level, message, containsPii) => {
+        if (!containsPii) {
+          console.log(message);
+        }
+      },
+      logLevel: "Info", // Enable more detailed logging for troubleshooting
+      piiLoggingEnabled: false
+    }
+  }
 };
 
-// Ensure MSAL instance is created only once
+// Export MSAL instance
 export const msalInstance = new PublicClientApplication(msalConfig);
 
-
+// Handle redirect promise on page load to properly handle the hash fragment
+msalInstance.handleRedirectPromise().catch(error => {
+  console.error("Redirect handling error:", error);
+});

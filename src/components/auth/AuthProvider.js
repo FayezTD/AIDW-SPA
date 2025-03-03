@@ -2,7 +2,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useMsal } from '@azure/msal-react';
 import { InteractionRequiredAuthError } from '@azure/msal-browser';
-// import { msalInstance } from './msalConfig'; // Import instance
 
 export const AuthContext = createContext();
 
@@ -13,11 +12,15 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    if (accounts.length > 0) {
-      acquireAccessToken(accounts[0]);
-    } else {
-      setLoading(false);
-    }
+    const checkAccount = async () => {
+      if (accounts.length > 0) {
+        await acquireAccessToken(accounts[0]);
+      } else {
+        setLoading(false);
+      }
+    };
+    
+    checkAccount();
   }, [accounts]);
 
   const acquireAccessToken = async (account) => {
@@ -33,9 +36,15 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
     } catch (error) {
       if (error instanceof InteractionRequiredAuthError) {
-        instance.acquireTokenRedirect({
-          scopes: ['user.read', 'openid', 'profile'],
-        });
+        try {
+          await instance.acquireTokenRedirect({
+            scopes: ['user.read', 'openid', 'profile'],
+          });
+        } catch (redirectError) {
+          console.error('Redirect error:', redirectError);
+        }
+      } else {
+        console.error('Token acquisition failed:', error);
       }
     } finally {
       setLoading(false);
@@ -45,16 +54,19 @@ export const AuthProvider = ({ children }) => {
   const login = async () => {
     setLoading(true);
     try {
-      await instance.loginPopup({ scopes: ['user.read', 'openid', 'profile'] });
+      // Change from loginPopup to loginRedirect to avoid hash handling issues
+      await instance.loginRedirect({
+        scopes: ['user.read', 'openid', 'profile'],
+        redirectStartPage: window.location.href
+      });
     } catch (error) {
       console.error('Login failed:', error);
-    } finally {
       setLoading(false);
     }
   };
 
   const logout = () => {
-    instance.logoutPopup();
+    instance.logoutRedirect(); // Change to redirect mode
     setUser(null);
     setIsAuthenticated(false);
   };
