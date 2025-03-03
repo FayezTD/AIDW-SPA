@@ -6,22 +6,31 @@ import { InteractionRequiredAuthError } from '@azure/msal-browser';
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const { instance, accounts } = useMsal();
+  const { instance, accounts, inProgress } = useMsal();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    const checkAccount = async () => {
+    const checkAndHandleAccount = async () => {
+      // Don't do anything while MSAL is busy with a redirect
+      if (inProgress !== 'none') {
+        return;
+      }
+      
       if (accounts.length > 0) {
-        await acquireAccessToken(accounts[0]);
+        try {
+          await acquireAccessToken(accounts[0]);
+        } catch (error) {
+          console.error("Token acquisition failed:", error);
+        }
       } else {
         setLoading(false);
       }
     };
     
-    checkAccount();
-  }, [accounts]);
+    checkAndHandleAccount();
+  }, [accounts, inProgress]);
 
   const acquireAccessToken = async (account) => {
     try {
@@ -29,6 +38,7 @@ export const AuthProvider = ({ children }) => {
         scopes: ['user.read', 'openid', 'profile'],
         account,
       });
+      
       setUser({
         email: account.username,
         accessToken: response.accessToken,
@@ -36,16 +46,11 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
     } catch (error) {
       if (error instanceof InteractionRequiredAuthError) {
-        try {
-          await instance.acquireTokenRedirect({
-            scopes: ['user.read', 'openid', 'profile'],
-          });
-        } catch (redirectError) {
-          console.error('Redirect error:', redirectError);
-        }
-      } else {
-        console.error('Token acquisition failed:', error);
+        // Instead of immediately redirecting, set a flag or state
+        console.log("Interactive login required");
+        setIsAuthenticated(false);
       }
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -54,19 +59,28 @@ export const AuthProvider = ({ children }) => {
   const login = async () => {
     setLoading(true);
     try {
-      // Change from loginPopup to loginRedirect to avoid hash handling issues
+      console.log("Initiating login redirect...");
+      // Make sure we're using the fully initialized instance
       await instance.loginRedirect({
         scopes: ['user.read', 'openid', 'profile'],
-        redirectStartPage: window.location.href
+        // Make sure the app remembers where the user was trying to go
+        redirectStartPage: window.location.origin + (window.location.pathname || '/'),
       });
+      // The page will redirect, so we don't need to do anything else here
     } catch (error) {
       console.error('Login failed:', error);
       setLoading(false);
     }
   };
 
-  const logout = () => {
-    instance.logoutRedirect(); // Change to redirect mode
+  const logout = async () => {
+    try {
+      await instance.logoutRedirect({
+        postLogoutRedirectUri: window.location.origin,
+      });
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
     setUser(null);
     setIsAuthenticated(false);
   };

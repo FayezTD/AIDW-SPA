@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import ChatPage from './pages/ChatPage';
 import ErrorPage from './pages/ErrorPage';
 import LoginPage from './pages/LoginPage';
@@ -10,14 +10,12 @@ import { msalInstance } from './components/auth/msalConfig';
 
 import './index.css';
 
-const App = () => {
-  // Handle redirect responses immediately when the component mounts
-  useEffect(() => {
-    msalInstance.handleRedirectPromise().catch(error => {
-      console.error("Redirect handling error:", error);
-    });
-  }, []);
+// Make sure MSAL instance is initialized before rendering
+msalInstance.initialize().catch(error => {
+  console.error("MSAL initialization error:", error);
+});
 
+const App = () => {
   return (
     <MsalProvider instance={msalInstance}>
       <AuthProvider>
@@ -27,7 +25,8 @@ const App = () => {
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<ChatPage />} />
             </Route>
-            <Route path="*" element={<ErrorPage />} />
+            {/* Add a catch-all route that redirects to root */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
       </AuthProvider>

@@ -14,26 +14,23 @@ export const msalConfig = {
     navigateToLoginRequestUrl: true,
   },
   cache: {
-    cacheLocation: 'localStorage', // Changed from sessionStorage to localStorage
-    storeAuthStateInCookie: true, // This helps with IE11, Safari and issues with popups
+    cacheLocation: 'localStorage',
+    storeAuthStateInCookie: true,
   },
   system: {
+    allowRedirectInIframe: true,
     loggerOptions: {
       loggerCallback: (level, message, containsPii) => {
         if (!containsPii) {
           console.log(message);
         }
       },
-      logLevel: "Info", // Enable more detailed logging for troubleshooting
+      logLevel: "Verbose", // Increase logging level for detailed troubleshooting
       piiLoggingEnabled: false
     }
   }
 };
 
-// Export MSAL instance
+// Create the MSAL instance but don't call initialize() or handleRedirectPromise() here
+// These will be called explicitly in index.js
 export const msalInstance = new PublicClientApplication(msalConfig);
-
-// Handle redirect promise on page load to properly handle the hash fragment
-msalInstance.handleRedirectPromise().catch(error => {
-  console.error("Redirect handling error:", error);
-});
