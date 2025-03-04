@@ -3,11 +3,35 @@ import ReactMarkdown from 'react-markdown';
 import { formatDistanceToNow } from 'date-fns';
 import CitationsList from './CitationsList';
 
-const ChatMessage = ({ message }) => {
+const ReasoningLoader = () => {
+  const [message, setMessage] = React.useState("Analyzing query...");
+  const loadingSteps = [
+    "Analyzing your query...",
+    "Fetching relevant data...",
+    "Processing response...",
+    "Finalizing answer..."
+  ];
+
+  React.useEffect(() => {
+    let step = 0;
+    const interval = setInterval(() => {
+      setMessage(loadingSteps[step % loadingSteps.length]);
+      step++;
+    }, 1500);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="text-gray-500 italic animate-pulse">{message}</div>
+  );
+};
+
+const ChatMessage = ({ message, isLoading }) => {
   const { role, content, timestamp, citations } = message;
   const isUser = role === 'user';
-  
-  const formattedTime = timestamp 
+
+  const formattedTime = timestamp
     ? formatDistanceToNow(new Date(timestamp), { addSuffix: true })
     : '';
 
@@ -22,7 +46,11 @@ const ChatMessage = ({ message }) => {
           {timestamp && <div className="ml-auto text-xs opacity-75">{formattedTime}</div>}
         </div>
         <div className="prose">
-          <ReactMarkdown>{content}</ReactMarkdown>
+          {isLoading && role === "assistant" ? (
+            <ReasoningLoader />
+          ) : (
+            <ReactMarkdown>{content}</ReactMarkdown>
+          )}
         </div>
         {!isUser && citations && citations.length > 0 && (
           <div className="mt-3 w-full">

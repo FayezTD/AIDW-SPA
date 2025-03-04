@@ -13,45 +13,36 @@ const LoginPage = () => {
   }, [user, navigate]);
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md border border-gray-100">
-        <div className="flex justify-center mb-6">
-          <div className="bg-blue-600 w-20 h-20 rounded-full flex items-center justify-center shadow-md">
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              viewBox="0 0 24 24" 
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="w-full max-w-xl p-12 space-y-10 bg-white rounded-2xl shadow-xl border border-gray-400">
+        <div className="flex flex-col items-center">
+          <svg 
+            className="w-24 h-24 mb-6 text-black"
+            viewBox="0 0 100 100" 
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle cx="50" cy="50" r="45" fill="none" stroke="black" strokeWidth="6"/>
+            <path 
+              d="M35 40 L50 70 L65 40" 
               fill="none" 
-              stroke="white" 
-              strokeWidth="2" 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              className="w-10 h-10"
-            >
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-              <circle cx="12" cy="10" r="2"></circle>
-              <path d="M12 14v2"></path>
-              <path d="M16 10h.01"></path>
-              <path d="M8 10h.01"></path>
-            </svg>
-          </div>
+              stroke="black" 
+              strokeWidth="6"
+            />
+            <circle cx="50" cy="50" r="5" fill="black"/>
+          </svg>
+          <h1 className="text-4xl font-bold text-black">AIDW Assistant</h1>
+          <p className="text-gray-700 mt-3 text-lg">Your personal AI workspace companion</p>
         </div>
-        
-        <h1 className="text-3xl font-bold text-center mb-2 text-gray-800">AIDW Assistant</h1>
-        <p className="text-gray-600 mb-8 text-center">Your intelligent workplace companion</p>
-        
-        <div className="space-y-6">
-          <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-            <p className="text-sm text-blue-800">Sign in to access personalized AI assistance for your workplace needs</p>
-          </div>
-          
+
+        <div>
           <button
             onClick={login}
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-150 flex items-center justify-center gap-2 shadow-sm"
+            className="w-full py-5 bg-black text-white text-lg rounded-lg hover:bg-gray-800 transition-colors flex items-center justify-center"
           >
             {loading ? (
               <>
-                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg className="animate-spin h-7 w-7 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
@@ -59,20 +50,20 @@ const LoginPage = () => {
               </>
             ) : (
               <>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+                <svg className="h-7 w-7 mr-2" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
+                  <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
+                  <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
+                  <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
                 </svg>
                 <span>Sign in with Microsoft</span>
               </>
             )}
           </button>
         </div>
-        
-        <div className="mt-8 pt-6 border-t border-gray-200">
-          <p className="text-xs text-center text-gray-500">
-            AI-Driven Workplace Assistant<br />
-            © {new Date().getFullYear()} AIDW
-          </p>
+
+        <div className="text-center text-sm text-gray-600 pt-6 border-t border-gray-300">
+          © {new Date().getFullYear()} AIDW
         </div>
       </div>
     </div>
