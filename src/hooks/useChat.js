@@ -15,13 +15,33 @@ export const STARTER_QUESTIONS = [
     title: '🌍 Potential market size of AB InBev Operation',
     question: 'How many countries does AB InBev operate in, and what is the potential market size for the ConnectAI solution in these regions?'
   },
-  // ... other starter questions ...
   {
     id: 'implementation-comparison',
     title: '🔄 Bajaj vs Starbucks AIDW Implementation',
     question: 'Please compare how Bajaj and Starbucks use the AIDW to enhance their business, cite both the documents'
+  },
+  {
+    id: 'ai-patterns-comparison',
+    title: '🤖 AI Patterns: Coca-Cola, CaixaBank & PepsiCo',
+    question: 'Compare the primary technical patterns used by Coca-Cola, CaixaBank, and PepsiCo in their AI implementations.'
+  },
+  {
+    id: 'roi-ab-inbev',
+    title: '📈 AB InBev ROI Projection',
+    question: 'Given the monthly revenue of $18,500 and the total monthly ACR for AI services ($1,000), App services ($500), and Data services ($500), what is the projected ROI for AB InBev after implementing ConnectAI over the next 12 months?'
+  },
+  {
+    id: 'bath-body-metrics',
+    title: '📊 Bath & Body Works: Key Metrics Analysis',
+    question: 'Bath & Body Works aims to impact key business metrics and will analyze launch metrics post-implementation to assess additional business effects. These include what?'
+  },
+  {
+    id: 'customer-service-improvements',
+    title: '💬 AI-Driven Customer Service: Starbucks, Ooredoo & Bajaj Finserv',
+    question: 'What similarities can be observed in the AI-driven customer service improvements implemented by Starbucks, Ooredoo, and Bajaj Finserv?'
   }
 ];
+
 
 // Enhanced message class to store metadata
 class MessageWithContext {
