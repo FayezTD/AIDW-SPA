@@ -20,7 +20,7 @@ const ReasoningLoader = () => {
     }, 1500);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [loadingSteps]); // Added `loadingSteps` to the dependency array
 
   return (
     <div className="text-gray-500 italic animate-pulse">{message}</div>
