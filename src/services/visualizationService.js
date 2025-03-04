@@ -1,5 +1,5 @@
 // Service for processing visualization elements in markdown content
-import Chart from 'chart.js/auto';
+// import Chart from 'chart.js/auto';
 
 class VisualizationService {
   /**
