@@ -1,18 +1,19 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { formatDistanceToNow } from 'date-fns';
 import CitationsList from './CitationsList';
 
 const ReasoningLoader = () => {
-  const [message, setMessage] = React.useState("Analyzing query...");
-  const loadingSteps = [
+  const [message, setMessage] = useState("Analyzing query...");
+
+  const loadingSteps = useMemo(() => [
     "Analyzing your query...",
     "Fetching relevant data...",
     "Processing response...",
     "Finalizing answer..."
-  ];
+  ], []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     let step = 0;
     const interval = setInterval(() => {
       setMessage(loadingSteps[step % loadingSteps.length]);
@@ -20,11 +21,9 @@ const ReasoningLoader = () => {
     }, 1500);
     
     return () => clearInterval(interval);
-  }, [loadingSteps]); // Added `loadingSteps` to the dependency array
+  }, [loadingSteps]);
 
-  return (
-    <div className="text-gray-500 italic animate-pulse">{message}</div>
-  );
+  return <div className="text-gray-500 italic animate-pulse">{message}</div>;
 };
 
 const ChatMessage = ({ message, isLoading }) => {
