@@ -16,20 +16,6 @@ const LoginPage = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="w-full max-w-xl p-12 space-y-10 bg-white rounded-2xl shadow-xl border border-gray-400">
         <div className="flex flex-col items-center">
-          <svg 
-            className="w-24 h-24 mb-6 text-black"
-            viewBox="0 0 100 100" 
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle cx="50" cy="50" r="45" fill="none" stroke="black" strokeWidth="6"/>
-            <path 
-              d="M35 40 L50 70 L65 40" 
-              fill="none" 
-              stroke="black" 
-              strokeWidth="6"
-            />
-            <circle cx="50" cy="50" r="5" fill="black"/>
-          </svg>
           <h1 className="text-4xl font-bold text-black">AIDW Assistant</h1>
           <p className="text-gray-700 mt-3 text-lg">Your personal AI workspace companion</p>
         </div>
