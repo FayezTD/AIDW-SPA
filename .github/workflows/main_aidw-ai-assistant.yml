@@ -8,12 +8,13 @@ on:
 
 env:
   AZURE_WEBAPP_NAME: 'AIDW-AI-Assistant'
+  NODE_VERSION: '18.x'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read  # Required for actions/checkout
+      contents: read
 
     steps:
       - name: Checkout Repository
@@ -22,16 +23,39 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18.x'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: Install dependencies and build
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Create web.config for SPA routing
         run: |
-          npm install
-          npm run build --if-present
+          cat > build/web.config << EOL
+          <?xml version="1.0" encoding="UTF-8"?>
+          <configuration>
+            <system.webServer>
+              <rewrite>
+                <rules>
+                  <rule name="React Routes" stopProcessing="true">
+                    <match url=".*" />
+                    <conditions logicalGrouping="MatchAll">
+                      <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />
+                      <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />
+                    </conditions>
+                    <action type="Rewrite" url="/" />
+                  </rule>
+                </rules>
+              </rewrite>
+            </system.webServer>
+          </configuration>
+          EOL
 
       - name: Zip artifact for deployment
-        run: zip release.zip ./build -r
+        run: zip -r release.zip ./build
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
