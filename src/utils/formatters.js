@@ -118,6 +118,7 @@ export default class ResponseFormatter {
     // Example: Your API might return something like: {{TABLE_DATA:{"headers":["Name","Age"],"rows":[["John",30],["Jane",25]]}}}
     text = text.replace(/{{TABLE_DATA:(.*?)}}/g, (match, jsonStr) => {
       try {
+        // eslint-disable-next-line no-unused-vars
         const tableData = JSON.parse(jsonStr);
         return `%%TABLE_JSON%%${jsonStr}%%END_TABLE%%`;
       } catch (e) {
