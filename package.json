@@ -1,7 +1,6 @@
 {
   "name": "react-chatbot",
   "version": "0.1.0",
-  "proxy": "https://salmon-plant-0706ca50f.4.azurestaticapps.net",
   "private": true,
   "dependencies": {
     "@azure/msal-browser": "^4.5.0",
@@ -30,11 +29,10 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build && cp staticwebapp.config.json build/",
-    "postinstall": "npm run build",
+    "build": "react-scripts build",
+    "serve": "serve -s build -l 8080",
     "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "serve": "npx serve -s build -l 8080"
+    "eject": "react-scripts eject"
   },
   "eslintConfig": {
     "extends": [
