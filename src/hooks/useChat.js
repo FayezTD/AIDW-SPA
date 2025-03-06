@@ -79,6 +79,11 @@ export function useChat() {
         setError(response.answer);
       } else {
         let processedAnswer = response.answer || "I'm sorry, I couldn't generate a complete response at this time.";
+        
+        // Process tables first (before other visualizations)
+        processedAnswer = ResponseFormatter.formatTables(processedAnswer);
+        
+        // Then process other visualizations
         processedAnswer = VisualizationService.processAllVisualizations(processedAnswer);
 
         const formattedCitations = ResponseFormatter.formatCitations(

@@ -119,3 +119,102 @@ code {
   66% { content: " ..."; }
   100% { content: " ."; }
 }
+
+/* Enhanced table styles - add to your index.css */
+
+/* Base table styling */
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.9rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Header styling */
+.prose thead {
+  background-color: #f8fafc;
+}
+
+.prose th {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  color: #334155;
+  border-bottom: 2px solid #e2e8f0;
+  text-transform: none;
+}
+
+/* Row styling */
+.prose tbody tr {
+  border-bottom: 1px solid #e2e8f0;
+  transition: background-color 0.2s;
+}
+
+.prose tbody tr:last-child {
+  border-bottom: none;
+}
+
+.prose tbody tr:nth-child(even) {
+  background-color: #f8fafc;
+}
+
+.prose tbody tr:hover {
+  background-color: #f1f5f9;
+}
+
+/* Cell styling */
+.prose td {
+  padding: 0.75rem 1rem;
+  color: #475569;
+  vertical-align: middle;
+}
+
+/* Responsive table container */
+.overflow-x-auto {
+  margin: 1rem 0;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e0 #f8fafc;
+}
+
+/* Custom scrollbar */
+.overflow-x-auto::-webkit-scrollbar {
+  height: 6px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: #f8fafc;
+  border-radius: 3px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background-color: #cbd5e0;
+  border-radius: 3px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .prose table {
+    font-size: 0.8rem;
+  }
+  
+  .prose th,
+  .prose td {
+    padding: 0.6rem 0.75rem;
+  }
+}
+
+/* Animation for table appearance */
+@keyframes tableAppear {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.prose table {
+  animation: tableAppear 0.3s ease-out;
+}
