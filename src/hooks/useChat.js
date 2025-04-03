@@ -1,4 +1,5 @@
-/* eslint-disable react-hooks/exhaustive-deps */
+/* useChat.js - Enhanced to auto-append reasoning payload */
+
 import { useState, useCallback } from 'react';
 import { useAuth } from '../components/auth/AuthProvider';
 import ChatService from '../services/chatService';
@@ -38,16 +39,22 @@ export const STARTER_QUESTIONS = [
   }
 ];
 
-export function useChat() {
+export function useChat(selectedModel) {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const chatService = new ChatService();
 
   const sendMessage = useCallback(async (content) => {
     if (!content.trim() || !isAuthenticated) return;
+
+    const reasoningPayload = "Discuss in Details or Show in Tabular form or give reasoning";
+    const finalContent = selectedModel === 'o1-Preview' 
+      ? `${content}\n${reasoningPayload}`
+      : content;
 
     const userMessage = {
       id: Date.now().toString(),
@@ -67,31 +74,19 @@ export function useChat() {
         content: msg.content
       }));
 
-      console.log('Sending message:', content);
-      console.log('With chat history:', chatHistory);
-
-      const response = await chatService.sendMessage(content, chatHistory);
-
-      console.log('Received API response:', response);
+      const response = await chatService.sendMessage(finalContent, chatHistory);
 
       if (response.error) {
-        console.error('Error in response:', response.answer);
         setError(response.answer);
       } else {
         let processedAnswer = response.answer || "I'm sorry, I couldn't generate a complete response at this time.";
-        
-        // Process tables first (before other visualizations)
         processedAnswer = ResponseFormatter.formatTables(processedAnswer);
-        
-        // Then process other visualizations
         processedAnswer = VisualizationService.processAllVisualizations(processedAnswer);
 
         const formattedCitations = ResponseFormatter.formatCitations(
           response.citations || [],
           response.hyperlinks || []
         );
-
-        console.log('Formatted citations:', formattedCitations);
 
         const assistantMessage = {
           id: Date.now().toString() + '-response',
@@ -104,12 +99,11 @@ export function useChat() {
         setMessages(prev => [...prev, assistantMessage]);
       }
     } catch (err) {
-      console.error('Error sending message:', err);
       setError('Failed to send message. Please try again.');
     } finally {
       setIsLoading(false);
     }
-  }, [messages, chatService, isAuthenticated, user]);
+  }, [messages, chatService, isAuthenticated, user, selectedModel]);
 
   const handleStarterQuestion = useCallback((question) => {
     sendMessage(question);

@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">
+  <!-- Background gradient -->
+  <defs>
+    <!-- Rich purple background -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a103d" />
+      <stop offset="100%" stop-color="#3a1764" />
+    </linearGradient>
+    
+    <!-- Vibrant gradients -->
+    <linearGradient id="vibrantPurple" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9d4edd" />
+      <stop offset="100%" stop-color="#c77dff" />
+    </linearGradient>
+    
+    <linearGradient id="vibrantPink" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff5ebc" />
+      <stop offset="100%" stop-color="#ff9ef5" />
+    </linearGradient>
+    
+    <linearGradient id="vibrantTeal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00b4d8" />
+      <stop offset="100%" stop-color="#90e0ef" />
+    </linearGradient>
+    
+    <linearGradient id="vibrantOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff8500" />
+      <stop offset="100%" stop-color="#ffb700" />
+    </linearGradient>
+    
+    <!-- Glow effects -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="20" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="10" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    
+    <!-- Patterns -->
+    <pattern id="dots" patternUnits="userSpaceOnUse" width="20" height="20">
+      <circle cx="10" cy="10" r="1" fill="white" opacity="0.3" />
+    </pattern>
+    
+    <pattern id="diagonalLines" patternUnits="userSpaceOnUse" width="10" height="10" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="10" stroke="white" stroke-width="1" stroke-opacity="0.2" />
+    </pattern>
+  </defs>
+  
+  <!-- Main background -->
+  <rect width="100%" height="100%" fill="url(#bgGradient)" />
+  
+  <!-- Background pattern -->
+  <rect width="100%" height="100%" fill="url(#dots)" opacity="0.5" />
+  
+  <!-- Background glowing shapes -->
+  <circle cx="200" cy="200" r="400" fill="#9d4edd" opacity="0.1" filter="url(#glow)" />
+  <circle cx="1000" cy="700" r="350" fill="#ff5ebc" opacity="0.1" filter="url(#glow)" />
+  <circle cx="900" cy="100" r="250" fill="#00b4d8" opacity="0.1" filter="url(#glow)" />
+  
+  <!-- Flowing curves -->
+  <path d="M-100,300 Q200,100 500,300 Q800,500 1100,300 Q1400,100 1700,300" stroke="url(#vibrantPurple)" stroke-width="100" fill="none" opacity="0.3" filter="url(#softGlow)" />
+  <path d="M-100,600 Q200,400 500,600 Q800,800 1100,600 Q1400,400 1700,600" stroke="url(#vibrantPink)" stroke-width="80" fill="none" opacity="0.3" filter="url(#softGlow)" />
+  
+  <!-- Floating shapes -->
+  <!-- Triangle -->
+  <path d="M300,300 L500,150 L500,450 Z" fill="url(#vibrantPurple)" opacity="0.8" filter="url(#softGlow)" />
+  
+  <!-- Card element -->
+  <g transform="translate(700, 350)">
+    <rect x="0" y="0" width="320" height="220" rx="30" fill="url(#vibrantTeal)" opacity="0.9" filter="url(#softGlow)" />
+    
+    <!-- Card content -->
+    <rect x="30" y="30" width="70" height="70" rx="15" fill="white" opacity="0.5" />
+    <rect x="120" y="40" width="160" height="25" rx="12.5" fill="white" opacity="0.5" />
+    <rect x="120" y="80" width="120" height="25" rx="12.5" fill="white" opacity="0.5" />
+    
+    <!-- Triangle in card -->
+    <path d="M65,150 L30,190 L100,190 Z" fill="white" opacity="0.5" />
+    
+    <!-- Circle in card -->
+    <circle cx="230" cy="165" r="35" fill="white" opacity="0.5" />
+  </g>
+  
+  <!-- Lines element -->
+  <g transform="translate(250, 500)">
+    <rect x="0" y="0" width="230" height="28" rx="14" fill="url(#vibrantPink)" opacity="0.9" filter="url(#softGlow)" />
+    <rect x="0" y="55" width="180" height="28" rx="14" fill="url(#vibrantPink)" opacity="0.9" filter="url(#softGlow)" />
+    <rect x="0" y="110" width="130" height="28" rx="14" fill="url(#vibrantPink)" opacity="0.9" filter="url(#softGlow)" />
+  </g>
+  
+  <!-- Star elements -->
+  <path d="M150,150 L165,110 L180,150 L220,165 L180,180 L165,220 L150,180 L110,165 Z" fill="url(#vibrantOrange)" opacity="0.9" filter="url(#softGlow)" />
+  
+  <path d="M900,200 L908,175 L916,200 L941,208 L916,216 L908,241 L900,216 L875,208 Z" fill="url(#vibrantOrange)" opacity="0.8" filter="url(#softGlow)" />
+  
+  <path d="M1050,280 L1055,265 L1060,280 L1075,285 L1060,290 L1055,305 L1050,290 L1035,285 Z" fill="url(#vibrantPink)" opacity="0.7" filter="url(#softGlow)" />
+  
+  <!-- Decorative circles -->
+  <circle cx="150" cy="650" r="60" fill="url(#vibrantTeal)" opacity="0.8" filter="url(#softGlow)" />
+  <circle cx="950" cy="550" r="40" fill="url(#vibrantPurple)" opacity="0.7" filter="url(#softGlow)" />
+  <circle cx="1100" cy="170" r="25" fill="url(#vibrantPink)" opacity="0.6" filter="url(#softGlow)" />
+  
+  <!-- Small decorative elements -->
+  <g>
+    <circle cx="400" cy="170" r="10" fill="white" opacity="0.8" />
+    <circle cx="850" cy="650" r="8" fill="white" opacity="0.7" />
+    <circle cx="200" cy="450" r="6" fill="white" opacity="0.6" />
+    <circle cx="1000" cy="350" r="7" fill="white" opacity="0.7" />
+    <circle cx="600" cy="700" r="9" fill="white" opacity="0.8" />
+  </g>
+</svg>
