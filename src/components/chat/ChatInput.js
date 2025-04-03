@@ -246,7 +246,9 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
-              handleSubmit(e);
+              if (message.trim() && !isLoading) {
+                handleSubmit(e);
+              }
             }
           }}
         />
@@ -272,20 +274,21 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
           </button>
 
           <button
-   type="submit"
-   ref={sendButtonRef}
-   className={`p-2 rounded-lg ${
-     isLoading || !message.trim() ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-primary text-white hover:bg-secondary'
-   } transition-colors focus:ring-2 focus:ring-[#20B2AA] focus:outline-none`}
-   disabled={isLoading || !message.trim()}
-   title="Send message"
-   aria-label="Send message"
->
-   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transform: 'rotate(45deg)'}}>
-       <path d="M22 2L11 13"></path>
-       <polygon points="22 2 2 9 11 13 15 22 22 2"></polygon>
-   </svg>
-</button>
+            type="button"
+            ref={sendButtonRef}
+            onClick={handleSubmit}
+            className={`p-2 rounded-lg ${
+              isLoading || !message.trim() ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-primary text-white hover:bg-secondary'
+            } transition-colors focus:ring-2 focus:ring-[#20B2AA] focus:outline-none`}
+            disabled={isLoading || !message.trim()}
+            title="Send message"
+            aria-label="Send message"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transform: 'rotate(45deg)'}}>
+                <path d="M22 2L11 13"></path>
+                <polygon points="22 2 2 9 11 13 15 22 22 2"></polygon>
+            </svg>
+          </button>
         </div>
         
         <div className="absolute left-3 bottom-3 flex space-x-2">
@@ -294,7 +297,7 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
               type="button"
               ref={clearButtonRef}
               onClick={handleClear}
-              className="p-1 rounded-md bg-gray-200 text-gray-500 hover:bg-gray-300 hover:text-gray-700 transition-colors flex items-center focus:ring-2 focus:ring-primary focus:outline-none"
+              className="p-1 rounded-full bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-colors flex items-center justify-center focus:ring-2 focus:ring-primary focus:outline-none shadow-sm"
               title="Clear message (ESC)"
               aria-label="Clear message"
             >
