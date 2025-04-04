@@ -110,9 +110,10 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
     }
   };
 
-  // Handle form submission
+  // Handle form submission - FIXED
   const handleSubmit = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    
     if (message.trim() && !isLoading) {
       // Stop listening if active
       if (isListening && recognitionRef.current) {
@@ -129,6 +130,11 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
       
       // Clear the message
       setMessage('');
+      
+      // Reset textarea height
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
     }
   };
 
@@ -207,13 +213,11 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
       }
     }
     
-    // Enter key handling (submit form)
-    if (e.key === 'Enter') {
-      if (!e.shiftKey && document.activeElement !== textareaRef.current) {
-        if (message.trim() && !isLoading) {
-          e.preventDefault();
-          handleSubmit(e);
-        }
+    // Handle Enter key for submit only when not in textarea with shift key
+    if (e.key === 'Enter' && document.activeElement !== textareaRef.current) {
+      if (message.trim() && !isLoading) {
+        e.preventDefault();
+        handleSubmit();
       }
     }
   };
@@ -232,6 +236,16 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
     setMessage(e.target.value);
   };
 
+  // Separate handler for textarea Enter key - FIXED
+  const handleTextareaKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (message.trim() && !isLoading) {
+        handleSubmit();
+      }
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="mt-4">
       <div className="relative">
@@ -243,14 +257,7 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
           onChange={handleInputChange}
           disabled={isLoading}
           aria-label="Message input"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              if (message.trim() && !isLoading) {
-                handleSubmit(e);
-              }
-            }
-          }}
+          onKeyDown={handleTextareaKeyDown}
         />
 
         <div className="absolute bottom-3 right-3 flex space-x-2">
