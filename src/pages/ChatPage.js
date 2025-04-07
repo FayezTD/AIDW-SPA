@@ -225,9 +225,14 @@ const ChatPage = () => {
   } = useChat();
  
   const { isAuthenticated, login } = useAuth();
-  const [setSelectedModel] = useState('GPT-4o');
+  const [selectedModel, setSelectedModel] = useState('GPT-4o');
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
+  
+  // State for sidebar collapsed status
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    return localStorage.getItem('sidebarCollapsed') === 'true';
+  });
  
   // Smooth scroll to bottom when messages change, with a slight delay to ensure content is rendered
   useEffect(() => {
@@ -240,6 +245,11 @@ const ChatPage = () => {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, isLoading]);
+
+  // Effect to sync sidebar collapsed state with localStorage
+  useEffect(() => {
+    localStorage.setItem('sidebarCollapsed', sidebarCollapsed.toString());
+  }, [sidebarCollapsed]);
 
   // Prevent automatic scrolling when user has manually scrolled up
   const [userScrolled, setUserScrolled] = useState(false);
@@ -268,6 +278,11 @@ const ChatPage = () => {
     // Reset userScrolled when sending a new message to ensure we scroll to the new message
     setUserScrolled(false);
   };
+
+  // Handle sidebar collapse/expand
+  const handleSidebarToggle = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
+  };
  
   if (!isAuthenticated) {
     return (
@@ -279,9 +294,6 @@ const ChatPage = () => {
           <div className="shape shape-4"></div>
           <div className="shape shape-5"></div>
           <div className="shape shape-6"></div>
-          {/* <div className="shape shape-7"></div>
-          <div className="shape shape-8"></div>
-          <div className="shape shape-9"></div> */}
         </div>
         <div className="relative z-10">
           <h2 className="text-3xl font-bold mb-6 text-gray-800">You must be signed in to chat.</h2>
@@ -309,13 +321,12 @@ const ChatPage = () => {
           <div className="shape shape-4"></div>
           <div className="shape shape-5"></div>
           <div className="shape shape-6"></div>
-          {/* <div className="shape shape-7"></div>
-          <div className="shape shape-8"></div>
-          <div className="shape shape-9"></div> */}
         </div>
         
-        {/* Fixed position sidebar */}
-        <div className="hidden md:block w-1/4 lg:w-1/5 h-full fixed left-0 top-0 pt-16 z-10">
+        {/* Sidebar with collapsible functionality */}
+        <div className={`hidden md:block h-full fixed left-0 top-0 pt-16 z-10 transition-all duration-300 ${
+          sidebarCollapsed ? 'w-16' : 'w-1/4 lg:w-1/5'
+        }`}>
           <Sidebar
             onNewChat={clearChat}
             activeChatId="current"
@@ -323,12 +334,16 @@ const ChatPage = () => {
             onSelectQuestion={handleStarterQuestion}
             questionStyle="text-white font-bold"
             className="h-full bg-gray-800 shadow-inner overflow-y-auto"
+            sidebarCollapsed={sidebarCollapsed}
+            setSidebarCollapsed={handleSidebarToggle}
           />
         </div>
         
-        {/* Main content with offset to accommodate fixed sidebar */}
+        {/* Main content with dynamic margin based on sidebar state */}
         <main 
-          className="flex-1 flex flex-col relative h-full z-10 md:ml-1/4 lg:ml-1/5" 
+          className={`flex-1 flex flex-col relative h-full z-10 transition-all duration-300 ${
+            sidebarCollapsed ? 'md:ml-16' : 'md:ml-1/4 lg:ml-1/5'
+          }`} 
           role="main" 
           aria-label="Chat interface"
         >
@@ -341,10 +356,6 @@ const ChatPage = () => {
                 <h1 className="welcome-title">
                   AI Design Wins - Assistant
                 </h1>
-
-                {/* <p className="welcome-text">
-                  I can help you with AI-driven workplace solutions.
-                </p> */}
                 
                 <div className="mb-8">
                   <ChatInput
