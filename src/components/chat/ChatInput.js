@@ -127,7 +127,7 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
       }
       
       // Always send with the default model
-      onSendMessage(message, defaultModel);
+      // onSendMessage(message, defaultModel);
       
       // Clear the message
       setMessage('');
