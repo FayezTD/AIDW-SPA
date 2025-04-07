@@ -225,7 +225,7 @@ const ChatPage = () => {
   } = useChat();
  
   const { isAuthenticated, login } = useAuth();
-  const [selectedModel, setSelectedModel] = useState('GPT-4o');
+  const [setSelectedModel] = useState('GPT-4o');
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
   
