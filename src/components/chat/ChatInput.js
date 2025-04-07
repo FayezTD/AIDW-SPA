@@ -1,15 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
-import ModelSelector from './ModelSelector';
 
 const ChatInput = ({ onSendMessage, isLoading }) => {
   const [message, setMessage] = useState('');
   const [isListening, setIsListening] = useState(false);
-  const [selectedModel, setSelectedModel] = useState('GPT-4o');
   const textareaRef = useRef(null);
   const sendButtonRef = useRef(null);
   const voiceButtonRef = useRef(null);
   const clearButtonRef = useRef(null);
   const recognitionRef = useRef(null);
+
+  // Set Deep Search as the default model
+  const defaultModel = 'o1-Preview';
 
   // Adjust textarea height based on content
   useEffect(() => {
@@ -110,7 +111,7 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
     }
   };
 
-  // Handle form submission - FIXED
+  // Handle form submission
   const handleSubmit = (e) => {
     if (e) e.preventDefault();
     
@@ -125,8 +126,8 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
         }
       }
       
-      // Include the selected model in the message metadata
-      onSendMessage(message, selectedModel);
+      // Always send with the default model
+      onSendMessage(message, defaultModel);
       
       // Clear the message
       setMessage('');
@@ -172,18 +173,6 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
           voiceButtonRef.current?.focus();
         }
         e.preventDefault();
-      } else if (activeElement === voiceButtonRef.current) {
-        if (message.trim()) {
-          sendButtonRef.current?.focus();
-        }
-        e.preventDefault();
-      } else if (activeElement === clearButtonRef.current) {
-        // Focus the first model selector option
-        const modelSelectorOptions = document.querySelectorAll('[role="radio"]');
-        if (modelSelectorOptions.length > 0) {
-          modelSelectorOptions[0].focus();
-        }
-        e.preventDefault();
       }
     }
     
@@ -195,20 +184,7 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
         voiceButtonRef.current?.focus();
         e.preventDefault();
       } else if (activeElement === voiceButtonRef.current) {
-        if (message) {
-          // Focus the last model selector option
-          const modelSelectorOptions = document.querySelectorAll('[role="radio"]');
-          if (modelSelectorOptions.length > 0) {
-            modelSelectorOptions[modelSelectorOptions.length - 1].focus();
-          }
-        } else {
-          textareaRef.current?.focus();
-        }
-        e.preventDefault();
-      } else if (activeElement.getAttribute('role') === 'radio') {
-        if (message) {
-          clearButtonRef.current?.focus();
-        }
+        textareaRef.current?.focus();
         e.preventDefault();
       }
     }
@@ -229,14 +205,14 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
       document.removeEventListener('keydown', handleKeyDown);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isListening, message, isLoading]);  // Added isLoading dependency
+  }, [isListening, message, isLoading]);
 
   // Handle manual typing
   const handleInputChange = (e) => {
     setMessage(e.target.value);
   };
 
-  // Separate handler for textarea Enter key - FIXED
+  // Separate handler for textarea Enter key
   const handleTextareaKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -315,7 +291,12 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
             </button>
           )}
 
-          <ModelSelector selectedModel={selectedModel} onSelectModel={setSelectedModel} />
+          {/* Fixed Deep Search indicator */}
+          <div className="flex items-center">
+            <div className="bg-gradient-to-r from-cyan-700 to-cyan-500 text-white py-1 px-3 rounded-full text-xs font-medium shadow-sm">
+              Deep Search
+            </div>
+          </div>
         </div>
       </div>
       
@@ -329,7 +310,7 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
       {/* Accessibility instructions */}
       <div className="sr-only" aria-live="polite">
         {isListening ? 'Voice input is active. Speak clearly.' : 'Voice input is off.'}
-        Use arrow keys to navigate between input field, model selection, and send button.
+        Use arrow keys to navigate between input field and send button.
       </div>
     </form>
   );
