@@ -10,7 +10,7 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
   const recognitionRef = useRef(null);
 
   // Set Deep Search as the default model
-  // const defaultModel = 'o1-Preview';
+  const defaultModel = 'o1-Preview';
 
   // Adjust textarea height based on content
   useEffect(() => {
@@ -127,7 +127,7 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
       }
       
       // Always send with the default model
-      // onSendMessage(message, defaultModel);
+      onSendMessage(message, defaultModel);
       
       // Clear the message
       setMessage('');
