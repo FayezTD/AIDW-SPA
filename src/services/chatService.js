@@ -16,8 +16,8 @@ export default class ChatService {
 
       // The correct endpoint path that matches the Azure Function URL pattern
       const response = await api.post('/api/aidw_chat_bot', {
-        query: message,
-        chat_history: chatHistory
+        question: message,
+        // chat_history: chatHistory
       }, config);
 
       return this.processResponse(response.data);

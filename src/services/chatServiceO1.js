@@ -16,8 +16,8 @@ export default class ChatServiceO1 {
 
       // Use a different endpoint for o1-Preview
       const response = await api.post('/api/aidw_chat_bot_o1', {
-        query: message,
-        chat_history: chatHistory
+        question: message,
+        // chat_history: chatHistory
       }, config);
 
       return this.processResponse(response.data);
