@@ -225,7 +225,6 @@ const ChatPage = () => {
   } = useChat();
  
   const { isAuthenticated, login } = useAuth();
-  const [setSelectedModel] = useState('GPT-4o');
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
   
@@ -271,9 +270,8 @@ const ChatPage = () => {
     }
   }, []);
  
-  // Handle sending messages with model selection
+  // Handle sending messages
   const handleSendMessage = (message, model) => {
-    setSelectedModel(model); // Update the selected model at the page level
     sendMessage(message, { model }); // Pass the model as metadata to the sendMessage function
     // Reset userScrolled when sending a new message to ensure we scroll to the new message
     setUserScrolled(false);
