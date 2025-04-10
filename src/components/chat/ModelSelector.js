@@ -33,7 +33,7 @@ const ModelSelector = ({ selectedModel, onSelectModel }) => {
   // Define model options
   const models = [
     { id: 'GPT-4o', label: 'Search' },
-    { id: 'o1-Preview', label: 'Deep Search' }
+    { id: 'o1-Preview', label: 'Detailed' }
   ];
 
   const handleModelSelect = (model) => {
@@ -48,7 +48,7 @@ const ModelSelector = ({ selectedModel, onSelectModel }) => {
     } else if (model === 'o1-Preview') {
       setToast({
         visible: true,
-        message: 'You are using o1-Preview for Deep Search',
+        message: 'You are using o1-Preview for Detailed Answer',
       });
     }
   };

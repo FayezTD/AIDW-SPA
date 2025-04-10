@@ -294,7 +294,7 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
           {/* Fixed Deep Search indicator */}
           <div className="flex items-center">
             <div className="bg-gradient-to-r from-cyan-700 to-cyan-500 text-white py-1 px-3 rounded-full text-xs font-medium shadow-sm">
-              Deep Search
+              Detailed
             </div>
           </div>
         </div>
