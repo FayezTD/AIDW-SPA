@@ -112,8 +112,8 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
 
   // Handle model change
   const handleModelChange = (newModel) => {
+    console.log(`Model being changed to: ${newModel}`); // Debug log
     setSelectedModel(newModel);
-    console.log(`Model changed to: ${newModel}`);
   };
 
   // Handle form submission
@@ -131,7 +131,10 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
         }
       }
       
-      // Send message with the selected model as a string, not an array
+      // Debug log to see what we're sending
+      console.log('Sending message with model:', selectedModel);
+      
+      // Send message with the selected model as a string
       onSendMessage(message, selectedModel);
       
       // Clear the message

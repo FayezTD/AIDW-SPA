@@ -1,5 +1,5 @@
-/* eslint-disable no-unused-vars */
-import api from './api';
+// Remove the unused api import since we're using fetch directly
+// import api from './api';
 
 export default class ChatService {
   constructor(getAccessToken = null) {
@@ -7,7 +7,7 @@ export default class ChatService {
     this.getAccessToken = getAccessToken;
     
     // Get the API endpoint from environment variables or use the provided one
-    this.apiEndpoint = process.env.REACT_APP_CONVERSATION_API_ENDPOINT || 
+    this.apiEndpoint = process.env.REACT_APP_API_URL || 
       'https://fn-aidw-wu2-conversationflow.azurewebsites.net/api/ConversationalOrchestration';
   }
 
@@ -26,13 +26,13 @@ export default class ChatService {
         }
       }
 
-      // Ensure model is a string, not an array
-      const modelValue = typeof model === 'string' ? model : 'o1-mini'; // Default if invalid
+      // Ensure model is a string and use exactly as provided from the selector
+      const modelValue = model || 'o1-mini'; // Fallback to o1-mini only if model is null/undefined
       
       // Create the request payload according to your specified format
       const payload = {
         question: message,
-        model: modelValue
+        model: modelValue // Use the exact model string from the dropdown
       };
       
       // You can add chat history if needed
