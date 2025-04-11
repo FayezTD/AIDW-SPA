@@ -1,11 +1,11 @@
 /* useChat.js - Enhanced to auto-append reasoning payload */
-
+ 
 import { useState, useCallback } from 'react';
 import { useAuth } from '../components/auth/AuthProvider';
 import ChatService from '../services/chatService';
 import VisualizationService from '../services/visualizationService';
 import ResponseFormatter from '../utils/formatters';
-
+ 
 export const STARTER_QUESTIONS = [
   {
     id: 'fabric-reports-limitations',
@@ -238,24 +238,24 @@ export const STARTER_QUESTIONS = [
     question: 'What is the role of Azure Form Recognizer in document automation?'
   }
 ];
-
+ 
 export function useChat(selectedModel) {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-
+ 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const chatService = new ChatService();
-
-  const sendMessage = useCallback(async (content) => {
+ 
+  const sendMessage = useCallback(async (content, model) => {
     if (!content.trim() || !isAuthenticated) return;
-
+ 
     const reasoningPayload = "Discuss in Details or Show in Tabular form or give reasoning";
-    const finalContent = selectedModel === 'o1-Preview' 
+    const finalContent = selectedModel === 'o1-Preview'
       ? `${content}\n${reasoningPayload}`
       : content;
-
+ 
     const userMessage = {
       id: Date.now().toString(),
       role: 'user',
@@ -263,31 +263,31 @@ export function useChat(selectedModel) {
       sender: user?.email || 'Anonymous',
       timestamp: new Date()
     };
-
+ 
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
     setError(null);
-
+ 
     try {
       const chatHistory = messages.map(msg => ({
         role: msg.role,
         content: msg.content
       }));
-
-      const response = await chatService.sendMessage(finalContent, chatHistory);
-
+ 
+      const response = await chatService.sendMessage(finalContent, model)
+ 
       if (response.error) {
         setError(response.answer);
       } else {
         let processedAnswer = response.answer || "I'm sorry, I couldn't generate a complete response at this time.";
         processedAnswer = ResponseFormatter.formatTables(processedAnswer);
         processedAnswer = VisualizationService.processAllVisualizations(processedAnswer);
-
+ 
         const formattedCitations = ResponseFormatter.formatCitations(
           response.citations || [],
           response.hyperlinks || []
         );
-
+ 
         const assistantMessage = {
           id: Date.now().toString() + '-response',
           role: 'assistant',
@@ -295,7 +295,7 @@ export function useChat(selectedModel) {
           citations: formattedCitations,
           timestamp: new Date()
         };
-
+ 
         setMessages(prev => [...prev, assistantMessage]);
       }
     } catch (err) {
@@ -304,16 +304,16 @@ export function useChat(selectedModel) {
       setIsLoading(false);
     }
   }, [messages, chatService, isAuthenticated, user, selectedModel]);
-
+ 
   const handleStarterQuestion = useCallback((question) => {
     sendMessage(question);
   }, [sendMessage]);
-
+ 
   const clearChat = useCallback(() => {
     setMessages([]);
     setError(null);
   }, []);
-
+ 
   return {
     messages,
     isLoading: isLoading || authLoading,
