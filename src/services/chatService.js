@@ -34,7 +34,7 @@ export default class ChatService {
       const response = await api.post(this.apiEndpoint, {
         question: message,
         model: modelValue, // The fixed model value
-        // chat_history: chatHistory
+        chat_history: chatHistory
       }, config);
 
       return this.processResponse(response.data);
