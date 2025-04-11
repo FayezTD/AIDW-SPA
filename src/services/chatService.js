@@ -4,7 +4,7 @@ export default class ChatService {
     this.getAccessToken = getAccessToken;
     
     // Get the API endpoint from environment variables or use the provided one
-    this.apiEndpoint = process.env.REACT_APP_CONVERSATION_API_ENDPOINT || 
+    this.apiEndpoint = process.env.REACT_APP_API_URL || 
       'https://fn-aidw-wu2-conversationflow.azurewebsites.net/api/ConversationalOrchestration';
   }
 
