@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import './ModelSelector.css'; // Import CSS if you have any styling
+// import './ModelSelector.css'; // Import CSS if you have any styling
 
 const ModelSelector = ({ onModelChange, initialModel = 'o1-mini' }) => {
   const [selectedModel, setSelectedModel] = useState(initialModel);
@@ -15,7 +15,7 @@ const ModelSelector = ({ onModelChange, initialModel = 'o1-mini' }) => {
     if (initialModel && initialModel !== selectedModel) {
       setSelectedModel(initialModel);
     }
-  }, [initialModel]);
+  }, [initialModel, selectedModel]);
 
   const handleModelChange = (e) => {
     const newModel = e.target.value;
