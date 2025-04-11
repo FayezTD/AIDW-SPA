@@ -16,17 +16,27 @@ export default class ChatService {
       if (this.getAccessToken) {
         config.getAccessToken = this.getAccessToken;
       }
+
+      // Ensure model is passed correctly and not transformed to default value
+      // Force it to be one of our supported models
+      let modelValue = model;
       
-      // Use the model that was passed in without any default fallback
-      console.log(`ChatService: Sending message to API with model: ${model}`);
+      // Validation step - if model isn't one of our valid options, use a default
+      const validModels = ['o1-mini', 'gpt-4o-mini'];
+      if (!validModels.includes(modelValue)) {
+        console.warn(`Invalid model: ${modelValue}. Defaulting to gpt-4o-mini.`);
+        modelValue = 'gpt-4o-mini';
+      }
       
+      console.log(`ChatService: Sending message to API with model: ${modelValue}`);
+
       // Use the endpoint from environment variable with model as a string
       const response = await api.post(this.apiEndpoint, {
         question: message,
-        model: model, // Use exactly what was selected in the dropdown
+        model: modelValue, // The fixed model value
         // chat_history: chatHistory
       }, config);
-      
+
       return this.processResponse(response.data);
     } catch (error) {
       console.error(`Error sending message to ${model}:`, error);
@@ -50,7 +60,7 @@ export default class ChatService {
         error: true
       };
     }
-    
+
     // Extract citations and hyperlinks
     const citations = data.citation ? 
       (Array.isArray(data.citation) ? data.citation : [data.citation]) : [];
@@ -64,7 +74,7 @@ export default class ChatService {
     
     console.log('Processed citations:', processedCitations);
     console.log('Processed hyperlinks:', processedHyperlinks);
-    
+
     return {
       answer: data.answer || '',
       citations: processedCitations,
