@@ -1,3 +1,6 @@
+// Remove the unused api import since we're using fetch directly
+// import api from './api';
+
 export default class ChatService {
   constructor(getAccessToken = null) {
     // Make getAccessToken optional
@@ -10,9 +13,6 @@ export default class ChatService {
 
   async sendMessage(message, model, chatHistory = []) {
     try {
-      // Log what model we're receiving - helps with debugging
-      console.log('ChatService received model:', model);
-      
       // Prepare headers
       const headers = {
         'Content-Type': 'application/json'
@@ -26,26 +26,22 @@ export default class ChatService {
         }
       }
 
-      // IMPORTANT: Use the exact model string that was passed in
-      // Only fall back to default if model is explicitly undefined/null
-      const modelValue = model !== undefined && model !== null ? model : 'o1-mini';
+      // Ensure model is a string and use exactly as provided from the selector
+      const modelValue = model || 'o1-mini'; // Fallback to o1-mini only if model is null/undefined
       
-      // Create the request payload
+      // Create the request payload according to your specified format
       const payload = {
         question: message,
-        model: modelValue // This will be exactly what was passed in
+        model: modelValue // Use the exact model string from the dropdown
       };
       
-      // Optionally add chat history
+      // You can add chat history if needed
       if (chatHistory && chatHistory.length > 0) {
         payload.chat_history = chatHistory;
       }
 
-      // Enhanced logging to better track what's happening
-      console.log('Sending API request:');
-      console.log('- Endpoint:', this.apiEndpoint);
-      console.log('- Headers:', JSON.stringify(headers));
-      console.log('- Payload:', JSON.stringify(payload));
+      console.log('Sending request to:', this.apiEndpoint);
+      console.log('With payload:', payload);
 
       // Make the API request
       const response = await fetch(this.apiEndpoint, {
@@ -56,22 +52,15 @@ export default class ChatService {
 
       if (!response.ok) {
         console.error('API Error:', response.status, response.statusText);
-        try {
-          // Try to get more detailed error info
-          const errorData = await response.json();
-          console.error('Error details:', errorData);
-        } catch (e) {
-          // Ignore if we can't parse error response
-        }
         throw new Error(`API responded with status: ${response.status}`);
       }
 
       const data = await response.json();
       return this.processResponse(data);
     } catch (error) {
-      console.error(`Error sending message:`, error);
+      console.error(`Error sending message to ${model}:`, error);
       return {
-        answer: `An error occurred while processing your message with ${model || 'the selected model'}. Please try again later.`,
+        answer: `An error occurred while processing your message with ${model}. Please try again later.`,
         citations: [],
         hyperlinks: [],
         error: true
