@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 /* useChat.js - Enhanced to auto-append reasoning payload */
  
 import { useState, useCallback } from 'react';
@@ -270,6 +269,11 @@ export function useChat(selectedModel) {
     setError(null);
  
     try {
+      // eslint-disable-next-line no-unused-vars
+      const chatHistory = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
  
       const response = await chatService.sendMessage(finalContent, model)
  
