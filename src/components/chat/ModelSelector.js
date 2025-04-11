@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useRef, useEffect } from 'react';
 
 const ModelSelector = ({ selectedModel, onModelChange, isLoading }) => {
@@ -16,7 +17,7 @@ const ModelSelector = ({ selectedModel, onModelChange, isLoading }) => {
       console.log(`Model ${selectedModel} not found in options, defaulting to ${models[0].id}`);
       onModelChange(models[0].id);
     }
-  }, [selectedModel, onModelChange]);
+  }, [selectedModel, onModelChange, models]);
 
   const handleToggleDropdown = () => {
     if (!isLoading) {
