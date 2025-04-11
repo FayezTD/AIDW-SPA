@@ -17,13 +17,15 @@ export default class ChatService {
         config.getAccessToken = this.getAccessToken;
       }
 
-      // Ensure model is a string, not an array
-      const modelValue = typeof model === 'string' ? model : 'o1-mini'; // Default if invalid
+      // Ensure model is a string and set a default if not valid
+      const modelValue = typeof model === 'string' && model ? model : 'o1-mini';
+      
+      console.log(`Sending message to model: ${modelValue}`);
 
       // Use the endpoint from environment variable with model as a string
       const response = await api.post(this.apiEndpoint, {
         question: message,
-        model: modelValue, // Ensure this is a string value
+        model: modelValue,
         // chat_history: chatHistory
       }, config);
 
