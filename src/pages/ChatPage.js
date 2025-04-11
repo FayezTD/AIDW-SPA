@@ -257,7 +257,10 @@ const ChatPage = () => {
   
   // State for sidebar collapsed status
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    return localStorage.getItem('sidebarCollapsed') === 'true';
+    // Get from localStorage or default to collapsed on mobile, expanded on desktop
+    const savedState = localStorage.getItem('sidebarCollapsed');
+    if (savedState !== null) return savedState === 'true';
+    return window.innerWidth < 768; // Default to collapsed on mobile
   });
  
   // Smooth scroll to bottom when messages change, with a slight delay to ensure content is rendered
@@ -296,6 +299,18 @@ const ChatPage = () => {
       return () => chatContainer.removeEventListener('scroll', handleScroll);
     }
   }, []);
+
+  // Handle window resize for responsive layout
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768 && !sidebarCollapsed) {
+        setSidebarCollapsed(true);
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [sidebarCollapsed]);
  
   // Handle sending messages
   const handleSendMessage = (message, model) => {
@@ -335,9 +350,11 @@ const ChatPage = () => {
   }
  
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-screen flex flex-col overflow-hidden">
+      {/* Header fixed at top */}
       <Header />
-      <div className="flex-1 flex overflow-hidden chat-background">
+      
+      <div className="flex flex-1 overflow-hidden chat-background">
         {/* 3D Dynamic Shapes */}
         <div className="shape-container">
           <div className="shape shape-1"></div>
@@ -348,10 +365,14 @@ const ChatPage = () => {
           <div className="shape shape-6"></div>
         </div>
         
-        {/* Sidebar with collapsible functionality */}
-        <div className={`hidden md:block h-full fixed left-0 top-0 pt-16 z-10 transition-all duration-300 ${
-          sidebarCollapsed ? 'w-16' : 'w-1/4 lg:w-1/5'
-        }`}>
+        {/* Sidebar - fixed position on desktop, slide-in on mobile */}
+        <div 
+          className={`fixed top-0 h-full z-20 transition-all duration-300 ease-in-out
+            ${sidebarCollapsed ? 'md:w-16 w-0' : 'md:w-1/4 lg:w-1/5 w-64'}
+            ${sidebarCollapsed && window.innerWidth < 768 ? '-translate-x-full' : 'translate-x-0'}
+          `}
+          style={{ paddingTop: '64px' }} // Height of the header
+        >
           <Sidebar
             onNewChat={clearChat}
             activeChatId="current"
@@ -364,25 +385,38 @@ const ChatPage = () => {
           />
         </div>
         
+        {/* Mobile sidebar toggle button - only visible on small screens */}
+        {sidebarCollapsed && (
+          <button 
+            className="md:hidden fixed left-4 top-20 z-30 bg-gray-800 text-white p-2 rounded-full shadow-lg"
+            onClick={handleSidebarToggle}
+            aria-label="Open sidebar"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        )}
+        
         {/* Main content with dynamic margin based on sidebar state */}
         <main 
-          className={`flex-1 flex flex-col relative h-full z-10 transition-all duration-300 ${
-            sidebarCollapsed ? 'md:ml-16' : 'md:ml-1/4 lg:ml-1/5'
-          }`} 
+          className={`flex-1 flex flex-col relative h-full z-10 transition-all duration-300 pt-16
+            ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-1/4 lg:ml-1/5'}
+          `} 
           role="main" 
           aria-label="Chat interface"
         >
           <div 
             ref={chatContainerRef}
-            className="flex-1 overflow-y-auto pt-8 pb-32 px-4 sm:px-6 lg:px-8 scroll-container"
+            className="flex-1 overflow-y-auto pb-32 px-4 sm:px-6 lg:px-8 scroll-container"
           >
             {messages.length === 0 && (
               <div className="max-w-5xl mx-auto text-center py-8 welcome-section">
-                <h1 className="welcome-title">
+                <h1 className="welcome-title mt-4">
                   AI Design Wins - Assistant
                 </h1>
                 
-                <div className="mb-8">
+                <div className="mb-8 mt-8">
                   <ChatInput
                     onSendMessage={handleSendMessage}
                     isLoading={isLoading}
@@ -394,22 +428,22 @@ const ChatPage = () => {
                 <div className="mt-12">
                   <h2 className="text-2xl font-bold text-cyan-700 mb-8 text-left transform translate-z-10">Choose your query type</h2>
                   
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8">
                     {STARTER_QUESTIONS.map((question) => (
                       <button
                         key={question.id}
                         onClick={() => handleStarterQuestion(question.question)}
-                        className="starter-question flex flex-col items-center p-6 text-left bg-black bg-opacity-10 backdrop-filter backdrop-blur-lg rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 border border-white border-opacity-20"
-                        style={{ minHeight: '200px' }}
+                        className="starter-question flex flex-col items-center p-4 md:p-6 text-left bg-black bg-opacity-10 backdrop-filter backdrop-blur-lg rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 border border-white border-opacity-20"
+                        style={{ minHeight: '180px' }}
                       >
                         <div className="w-full flex items-center mb-4">
                           <div className="flex-shrink-0 transform hover:rotate-6 transition-transform duration-300">
                             {question.icon}
                           </div>
-                          <h3 className="text-xl font-bold ml-4 text-cyan-900">{question.title}</h3>
+                          <h3 className="text-lg md:text-xl font-bold ml-4 text-cyan-900">{question.title}</h3>
                         </div>
-                        <p className="text-black text-md">
-                          {question.question.length > 120 ? `${question.question.substring(0, 120)}...` : question.question}
+                        <p className="text-black text-sm md:text-md">
+                          {question.question.length > 100 ? `${question.question.substring(0, 100)}...` : question.question}
                         </p>
                       </button>
                     ))}
@@ -420,7 +454,7 @@ const ChatPage = () => {
            
             {messages.length > 0 && (
               <div
-                className="max-w-5xl mx-auto space-y-8"
+                className="max-w-5xl mx-auto space-y-6 md:space-y-8 mt-4"
                 role="log"
                 aria-label="Chat messages"
                 aria-live="polite"
