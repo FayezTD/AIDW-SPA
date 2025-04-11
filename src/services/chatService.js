@@ -4,6 +4,9 @@ export default class ChatService {
   constructor(getAccessToken = null) {
     // Make getAccessToken optional
     this.getAccessToken = getAccessToken;
+    
+    // Get the API endpoint from environment variables
+    this.apiEndpoint = process.env.REACT_APP_CONVERSATION_API_ENDPOINT || '/api/ConversationalOrchestration';
   }
 
   async sendMessage(message, model, chatHistory = []) {
@@ -14,10 +17,13 @@ export default class ChatService {
         config.getAccessToken = this.getAccessToken;
       }
 
-      // Use the updated Azure Function endpoint
-      const response = await api.post('https://fn-aidw-wu2-conversationflow.azurewebsites.net/api/ConversationalOrchestration', {
+      // Ensure model is a string, not an array
+      const modelValue = typeof model === 'string' ? model : 'o1-mini'; // Default if invalid
+
+      // Use the endpoint from environment variable with model as a string
+      const response = await api.post(this.apiEndpoint, {
         question: message,
-        model: model, // Include model parameter in the payload
+        model: modelValue, // Ensure this is a string value
         // chat_history: chatHistory
       }, config);
 

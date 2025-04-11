@@ -42,9 +42,9 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
 
     if (recognitionRef.current) {
       // Configure recognition
-      recognitionRef.current.continuous = false; // Changed to false for better reliability
-      recognitionRef.current.interimResults = false; // Changed to false for final results only
-      recognitionRef.current.lang = 'en-US'; // Set language explicitly
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = 'en-US';
       
       // Handle results
       recognitionRef.current.onresult = (event) => {
@@ -131,7 +131,7 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
         }
       }
       
-      // Send with the selected model
+      // Send message with the selected model as a string, not an array
       onSendMessage(message, selectedModel);
       
       // Clear the message
