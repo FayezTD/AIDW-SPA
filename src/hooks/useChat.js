@@ -247,8 +247,8 @@ export function useChat(selectedModel) {
  
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const chatService = new ChatService();
-
-  const sendMessage = useCallback(async (content) => {
+ 
+  const sendMessage = useCallback(async (content, model) => {
     if (!content.trim() || !isAuthenticated) return;
  
     const reasoningPayload = "Discuss in Details or Show in Tabular form or give reasoning";
@@ -273,9 +273,9 @@ export function useChat(selectedModel) {
         role: msg.role,
         content: msg.content
       }));
-
-      const response = await chatService.sendMessage(finalContent, chatHistory);
-
+ 
+      const response = await chatService.sendMessage(finalContent, model)
+ 
       if (response.error) {
         setError(response.answer);
       } else {
