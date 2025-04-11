@@ -17,15 +17,23 @@ export default class ChatService {
         config.getAccessToken = this.getAccessToken;
       }
 
-      // Ensure model is a string and set a default if not valid
-      const modelValue = typeof model === 'string' && model ? model : 'o1-mini';
+      // Ensure model is passed correctly and not transformed to default value
+      // Force it to be one of our supported models
+      let modelValue = model;
       
-      console.log(`Sending message to model: ${modelValue}`);
+      // Validation step - if model isn't one of our valid options, use a default
+      const validModels = ['o1-mini', 'gpt-4o-mini'];
+      if (!validModels.includes(modelValue)) {
+        console.warn(`Invalid model: ${modelValue}. Defaulting to gpt-4o-mini.`);
+        modelValue = 'gpt-4o-mini';
+      }
+      
+      console.log(`ChatService: Sending message to API with model: ${modelValue}`);
 
       // Use the endpoint from environment variable with model as a string
       const response = await api.post(this.apiEndpoint, {
         question: message,
-        model: modelValue,
+        model: modelValue, // The fixed model value
         // chat_history: chatHistory
       }, config);
 

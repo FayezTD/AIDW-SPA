@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 const ModelSelector = ({ selectedModel, onModelChange, isLoading }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -9,6 +9,15 @@ const ModelSelector = ({ selectedModel, onModelChange, isLoading }) => {
     { id: 'gpt-4o-mini', name: 'gpt-4o-mini', color: 'from-green-700 to-green-500' }
   ];
 
+  // Make sure the model exists in our options
+  useEffect(() => {
+    const modelExists = models.some(m => m.id === selectedModel);
+    if (!modelExists && models.length > 0) {
+      console.log(`Model ${selectedModel} not found in options, defaulting to ${models[0].id}`);
+      onModelChange(models[0].id);
+    }
+  }, [selectedModel, onModelChange]);
+
   const handleToggleDropdown = () => {
     if (!isLoading) {
       setIsOpen(!isOpen);
@@ -16,12 +25,13 @@ const ModelSelector = ({ selectedModel, onModelChange, isLoading }) => {
   };
 
   const handleSelectModel = (modelId) => {
+    console.log(`ModelSelector: Model selected: ${modelId}`);
     onModelChange(modelId);
     setIsOpen(false);
   };
 
   // Close dropdown when clicking outside
-  React.useEffect(() => {
+  useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsOpen(false);
@@ -49,6 +59,7 @@ const ModelSelector = ({ selectedModel, onModelChange, isLoading }) => {
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-label="Select AI model"
+        data-testid="model-selector-button"
       >
         <span className="mr-1">Model:</span>
         <span className="font-medium">{currentModel.name}</span>
@@ -77,6 +88,7 @@ const ModelSelector = ({ selectedModel, onModelChange, isLoading }) => {
                 onClick={() => handleSelectModel(model.id)}
                 className={`cursor-pointer px-3 py-2 text-xs hover:bg-gray-100 flex items-center justify-between
                           ${model.id === selectedModel ? 'bg-gray-50 font-medium' : ''}`}
+                data-testid={`model-option-${model.id}`}
               >
                 <span>{model.name}</span>
                 {model.id === selectedModel && (

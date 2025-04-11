@@ -4,12 +4,17 @@ import ModelSelector from './ModelSelector';
 const ChatInput = ({ onSendMessage, isLoading }) => {
   const [message, setMessage] = useState('');
   const [isListening, setIsListening] = useState(false);
-  const [selectedModel, setSelectedModel] = useState('o1-mini'); // Default model
+  const [selectedModel, setSelectedModel] = useState('gpt-4o-mini'); // Changed default model to gpt-4o-mini
   const textareaRef = useRef(null);
   const sendButtonRef = useRef(null);
   const voiceButtonRef = useRef(null);
   const clearButtonRef = useRef(null);
   const recognitionRef = useRef(null);
+
+  // Debugging selectedModel changes
+  useEffect(() => {
+    console.log(`ChatInput: Current selected model: ${selectedModel}`);
+  }, [selectedModel]);
 
   // Adjust textarea height based on content
   useEffect(() => {
@@ -112,7 +117,7 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
 
   // Handle model change
   const handleModelChange = (newModel) => {
-    console.log(`Model changed to: ${newModel}`);
+    console.log(`ChatInput: Model changed to: ${newModel}`);
     setSelectedModel(newModel);
   };
 
@@ -131,8 +136,10 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
         }
       }
       
+      // Debug right before sending
+      console.log(`ChatInput: Submitting message with model: ${selectedModel}`);
+      
       // Send message with the selected model
-      console.log(`Sending message with model: ${selectedModel}`);
       onSendMessage(message, selectedModel);
       
       // Clear the message
@@ -229,7 +236,7 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mt-4">
+    <form onSubmit={handleSubmit} className="mt-4" data-testid="chat-input-form">
       <div className="relative">
         <textarea
           ref={textareaRef}
@@ -240,6 +247,7 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
           disabled={isLoading}
           aria-label="Message input"
           onKeyDown={handleTextareaKeyDown}
+          data-testid="message-textarea"
         />
 
         <div className="absolute bottom-3 right-3 flex space-x-2">
@@ -256,6 +264,7 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
             title={isListening ? "Stop listening" : "Start voice input"}
             aria-label={isListening ? "Stop voice input" : "Start voice input"}
             aria-pressed={isListening}
+            data-testid="voice-button"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
@@ -272,6 +281,7 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
             disabled={isLoading || !message.trim()}
             title="Send message"
             aria-label="Send message"
+            data-testid="send-button"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transform: 'rotate(45deg)'}}>
                 <path d="M22 2L11 13"></path>
@@ -289,6 +299,7 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
               className="p-1 rounded-full bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-colors flex items-center justify-center focus:ring-2 focus:ring-primary focus:outline-none shadow-sm"
               title="Clear message (ESC)"
               aria-label="Clear message"
+              data-testid="clear-button"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -319,6 +330,9 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
         Use arrow keys to navigate between input field and send button.
         Current Model selected: {selectedModel}
       </div>
+      
+      {/* Hidden field to debug model value */}
+      <input type="hidden" data-testid="selected-model-debug" value={selectedModel} />
     </form>
   );
 };
