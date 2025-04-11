@@ -15,7 +15,7 @@ export default class ChatService {
       }
 
       // Use a unified endpoint with model parameter
-      const response = await api.post('/api/aidw_chat_bot_o1', {
+      const response = await api.post('/api/ConversationalOrchestration?', {
         question: message,
         model: model, // Add model parameter to the payload
         // chat_history: chatHistory
