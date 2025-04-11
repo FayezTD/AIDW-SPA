@@ -6,7 +6,7 @@ export default class ChatService {
     this.getAccessToken = getAccessToken;
   }
 
-  async sendMessage(message, chatHistory = []) {
+  async sendMessage(message, model, chatHistory = []) {
     try {
       // Create a config object that might or might not include getAccessToken
       const config = {};
@@ -14,17 +14,18 @@ export default class ChatService {
         config.getAccessToken = this.getAccessToken;
       }
 
-      // The correct endpoint path that matches the Azure Function URL pattern
-      const response = await api.post('/api/aidw_chat_bot', {
+      // Use a unified endpoint with model parameter
+      const response = await api.post('/api/aidw_chat_bot_o1', {
         question: message,
+        model: model, // Add model parameter to the payload
         // chat_history: chatHistory
       }, config);
 
       return this.processResponse(response.data);
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error(`Error sending message to ${model}:`, error);
       return {
-        answer: 'An error occurred while processing your message. Please try again later.',
+        answer: `An error occurred while processing your message with ${model}. Please try again later.`,
         citations: [],
         hyperlinks: [],
         error: true

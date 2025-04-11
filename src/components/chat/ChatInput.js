@@ -1,16 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
+import ModelSelector from './ModelSelector';
 
 const ChatInput = ({ onSendMessage, isLoading }) => {
   const [message, setMessage] = useState('');
   const [isListening, setIsListening] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('o1-mini'); // Default model
   const textareaRef = useRef(null);
   const sendButtonRef = useRef(null);
   const voiceButtonRef = useRef(null);
   const clearButtonRef = useRef(null);
   const recognitionRef = useRef(null);
-
-  // Set Deep Search as the default model
-  const defaultModel = 'o1-Preview';
 
   // Adjust textarea height based on content
   useEffect(() => {
@@ -111,6 +110,12 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
     }
   };
 
+  // Handle model change
+  const handleModelChange = (newModel) => {
+    setSelectedModel(newModel);
+    console.log(`Model changed to: ${newModel}`);
+  };
+
   // Handle form submission
   const handleSubmit = (e) => {
     if (e) e.preventDefault();
@@ -126,8 +131,8 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
         }
       }
       
-      // Always send with the default model
-      onSendMessage(message, defaultModel);
+      // Send with the selected model
+      onSendMessage(message, selectedModel);
       
       // Clear the message
       setMessage('');
@@ -274,7 +279,7 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
           </button>
         </div>
         
-        <div className="absolute left-3 bottom-3 flex space-x-2">
+        <div className="absolute left-3 bottom-3 flex space-x-2 items-center">
           {message && (
             <button
               type="button"
@@ -291,12 +296,12 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
             </button>
           )}
 
-          {/* Fixed Deep Search indicator */}
-          <div className="flex items-center">
-            <div className="bg-gradient-to-r from-cyan-700 to-cyan-500 text-white py-1 px-3 rounded-full text-xs font-medium shadow-sm">
-              o1-mini
-            </div>
-          </div>
+          {/* Model Selector Component */}
+          <ModelSelector 
+            selectedModel={selectedModel} 
+            onModelChange={handleModelChange} 
+            isLoading={isLoading} 
+          />
         </div>
       </div>
       
@@ -311,6 +316,7 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
       <div className="sr-only" aria-live="polite">
         {isListening ? 'Voice input is active. Speak clearly.' : 'Voice input is off.'}
         Use arrow keys to navigate between input field and send button.
+        Current model selected: {selectedModel}
       </div>
     </form>
   );
