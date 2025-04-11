@@ -6,7 +6,7 @@ export default class ChatService {
     this.getAccessToken = getAccessToken;
     
     // Get the API endpoint from environment variables
-    this.apiEndpoint = process.env.REACT_APP_API_URL || 'https://salmon-plant-0706ca50f.4.azurestaticapps.net/api/ConversationalOrchestration?';
+    this.apiEndpoint = process.env.REACT_APP_API_URL || 'https://mango-hill-0032f541e.6.azurestaticapps.net/api/ConversationalOrchestration?';
   }
 
   async sendMessage(message, model, chatHistory = []) {
