@@ -14,10 +14,10 @@ export default class ChatService {
         config.getAccessToken = this.getAccessToken;
       }
 
-      // Use a unified endpoint with model parameter
-      const response = await api.post('/api/ConversationalOrchestration?', {
+      // Use the updated Azure Function endpoint
+      const response = await api.post('https://fn-aidw-wu2-conversationflow.azurewebsites.net/api/ConversationalOrchestration', {
         question: message,
-        model: model, // Add model parameter to the payload
+        model: model, // Include model parameter in the payload
         // chat_history: chatHistory
       }, config);
 
