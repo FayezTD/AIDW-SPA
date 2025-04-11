@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import api from './api';
 
 export default class ChatService {
