@@ -319,7 +319,7 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
       <div className="sr-only" aria-live="polite">
         {isListening ? 'Voice input is active. Speak clearly.' : 'Voice input is off.'}
         Use arrow keys to navigate between input field and send button.
-        Current model selected: {selectedModel}
+        Current Model selected: {selectedModel}
       </div>
     </form>
   );
