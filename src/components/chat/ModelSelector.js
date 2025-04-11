@@ -34,7 +34,7 @@ const ModelSelector = ({ selectedModel, onModelChange, isLoading }) => {
           </svg>
         </div>
       </div>
-
+      
       {/* Visual indicator for selected model */}
       <div className={`bg-gradient-to-r ${models.find(m => m.id === selectedModel)?.color} 
                     text-white py-1 px-3 rounded-full text-xs font-medium shadow-sm hidden sm:block`}>
