@@ -314,7 +314,7 @@ const ChatPage = () => {
  
   // Handle sending messages
   const handleSendMessage = (message, model) => {
-    sendMessage(message, { model }); // Pass the model as metadata to the sendMessage function
+    sendMessage(message, model ); // Pass the model as metadata to the sendMessage function
     // Reset userScrolled when sending a new message to ensure we scroll to the new message
     setUserScrolled(false);
   };
