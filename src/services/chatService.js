@@ -6,7 +6,7 @@ export default class ChatService {
     this.getAccessToken = getAccessToken;
     
     // Get the API endpoint from environment variables
-    this.apiEndpoint = process.env.REACT_APP_API_URL || 'https://salmon-plant-0706ca50f.4.azurestaticapps.net/api/ConversationalOrchestration?';
+    this.apiEndpoint = process.env.REACT_APP_API_URL ;
   }
 
   async sendMessage(message, model, chatHistory = []) {
@@ -26,9 +26,10 @@ export default class ChatService {
       const response = await api.post(this.apiEndpoint, {
         question: message,
         model: modelValue,
-        // chat_history: chatHistory
+        chat_history: chatHistory
       }, config);
-
+      
+      
       return this.processResponse(response.data);
     } catch (error) {
       console.error(`Error sending message to ${model}:`, error);

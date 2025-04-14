@@ -195,7 +195,7 @@ export const STARTER_QUESTIONS = [
         </g>
       </svg>
     ),
-    question: 'What are the resiliency patterns mentioned in Azure architectural designs?'
+    question: 'What are the resiliency patterns mentioned in Azure architectural designs? Please tabulate the response. '
   },
   {
     id: 'azure-form-recognizer',

@@ -59,6 +59,7 @@ const ChatMessage = ({ message, isLoading }) => {
   const isUser = role === 'user';
   const [toast, setToast] = useState({ visible: false, message: '' });
   const [isPlaying, setIsPlaying] = useState(false);
+  const [voices, setVoices] = useState([]);
   const speechSynthRef = useRef(null);
 
   const formattedTime = timestamp
@@ -69,6 +70,28 @@ const ChatMessage = ({ message, isLoading }) => {
   const hasTable = content && content.includes('%%TABLE_JSON%%');
   const hasGraph = content && content.includes('%%GRAPH_JSON%%');
 
+  // Get available voices when component mounts
+  useEffect(() => {
+    const loadVoices = () => {
+      const availableVoices = window.speechSynthesis.getVoices();
+      setVoices(availableVoices);
+    };
+
+    // Load voices right away
+    loadVoices();
+
+    // Chrome requires waiting for voiceschanged event
+    if (window.speechSynthesis) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
+    return () => {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.onvoiceschanged = null;
+      }
+    };
+  }, []);
+
   const showToast = (message) => {
     setToast({ visible: true, message });
   };
@@ -78,15 +101,52 @@ const ChatMessage = ({ message, isLoading }) => {
   };
 
   const handleCopy = () => {
-    // Extract plain text content without markdown
-    const textToCopy = content.replace(/%%TABLE_JSON%%.*?%%END_TABLE%%/gs, '[Table]')
-                             .replace(/%%GRAPH_JSON%%.*?%%END_GRAPH%%/gs, '[Graph]')
-                             .replace(/<br>/g, '\n')
-                             .replace(/\*\*([^*]+)\*\*/g, '$1');
+    // Extract plain text content without markdown and special formatting
+    const textToCopy = content
+      .replace(/%%TABLE_JSON%%.*?%%END_TABLE%%/gs, '[Table]')
+      .replace(/%%GRAPH_JSON%%.*?%%END_GRAPH%%/gs, '[Graph]')
+      .replace(/<br>/g, '\n')
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Replace markdown links with just the text
+      .replace(/#+\s(.+)/g, '$1') // Replace markdown headers with just the text
+      .replace(/`([^`]+)`/g, '$1') // Replace inline code with just the text
+      .replace(/```[\s\S]*?```/g, '[Code Block]'); // Replace code blocks
     
     navigator.clipboard.writeText(textToCopy).then(() => {
       showToast('Copied to clipboard');
     });
+  };
+
+  // Format text for better speech reading
+  const formatTextForSpeech = (text) => {
+    return text
+      // Replace special content blocks
+      .replace(/%%TABLE_JSON%%.*?%%END_TABLE%%/gs, 'Here is a table with data.')
+      .replace(/%%GRAPH_JSON%%.*?%%END_GRAPH%%/gs, 'Here is a graph visualization.')
+      // Handle HTML tags and line breaks
+      .replace(/<br>/g, '. ')
+      .replace(/<[^>]*>/g, '') 
+      // Handle markdown formatting
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/_([^_]+)_/g, '$1')
+      .replace(/~~([^~]+)~~/g, '$1')
+      // Handle links
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      // Handle headers
+      .replace(/#+\s(.+)/g, '$1. ')
+      // Handle code blocks
+      .replace(/```[\s\S]*?```/g, 'Here is some code. ')
+      .replace(/`([^`]+)`/g, '$1')
+      // Handle lists
+      .replace(/^\s*[-*]\s+(.+)/gm, '. $1')
+      .replace(/^\s*\d+\.\s+(.+)/gm, '. $1')
+      // Handle excessive whitespace and periods
+      .replace(/\s{2,}/g, ' ')
+      .replace(/\.{2,}/g, '.')
+      .replace(/\.\s*\./g, '.')
+      // Add natural pauses
+      .replace(/([.!?])\s+/g, '$1. ');
   };
 
   const handlePlay = () => {
@@ -100,13 +160,58 @@ const ChatMessage = ({ message, isLoading }) => {
     }
 
     if (window.speechSynthesis) {
-      // Extract plain text for speech
-      const textToSpeak = content.replace(/%%TABLE_JSON%%.*?%%END_TABLE%%/gs, 'Table data')
-                                .replace(/%%GRAPH_JSON%%.*?%%END_GRAPH%%/gs, 'Graph data')
-                                .replace(/<br>/g, '\n')
-                                .replace(/\*\*([^*]+)\*\*/g, '$1');
+      // Format text for better speech
+      const textToSpeak = formatTextForSpeech(content);
       
       const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      
+      // Find a female voice with appropriate characteristics
+      let selectedVoice = null;
+      
+      // Try to find an ideal female voice
+      const femaleVoices = voices.filter(voice => 
+        voice.name.includes('female') || 
+        voice.name.includes('Female') || 
+        voice.name.includes('Samantha') || 
+        voice.name.includes('Ava') ||
+        voice.name.includes('Victoria') ||
+        voice.name.includes('Karen') ||
+        voice.name.includes('Google UK English Female') ||
+        voice.name.includes('Microsoft Zira')
+      );
+      
+      if (femaleVoices.length > 0) {
+        // Prioritize high-quality voices
+        const preferredVoices = ['Google UK English Female', 'Samantha', 'Microsoft Zira', 'Ava'];
+        const preferred = femaleVoices.find(voice => 
+          preferredVoices.some(name => voice.name.includes(name))
+        );
+        
+        selectedVoice = preferred || femaleVoices[0];
+      } else if (voices.length > 0) {
+        // Fallback to any available voice
+        selectedVoice = voices.find(v => v.lang.startsWith('en-')) || voices[0];
+      }
+      
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
+      }
+      
+      // Optimize voice parameters for clarity and natural sound
+      utterance.pitch = 1.5;      // Slightly higher pitch for female voice
+      utterance.rate = 1.40;      // Slightly slower for clarity
+      utterance.volume = 3.0;     // Maximum volume
+      
+      // Add natural pauses at punctuation
+      utterance.onboundary = function(event) {
+        if (event.name === 'sentence') {
+          // Add slight pause at sentence boundaries
+          const pause = new SpeechSynthesisUtterance('.');
+          pause.volume = 0;
+          pause.rate = 0.1;
+        }
+      };
+      
       utterance.onend = () => {
         setIsPlaying(false);
       };
@@ -114,7 +219,6 @@ const ChatMessage = ({ message, isLoading }) => {
       speechSynthRef.current = utterance;
       window.speechSynthesis.speak(utterance);
       setIsPlaying(true);
-      showToast('Playing');
     } else {
       showToast('Speech synthesis not supported in your browser');
     }
@@ -266,7 +370,11 @@ const FormattedContent = ({ content }) => {
         // Override list items to ensure proper spacing
         li: ({node, ...props}) => <li className="my-1" {...props} />,
         // Override paragraphs to ensure proper spacing
-        p: ({node, ...props}) => <p className="my-2" {...props} />
+        p: ({node, ...props}) => <p className="my-2" {...props} />,
+        // Improve table rendering
+        table: ({node, ...props}) => <table className="border-collapse w-full my-4" {...props} />,
+        th: ({node, ...props}) => <th className="border border-gray-300 px-4 py-2 bg-gray-100" {...props} />,
+        td: ({node, ...props}) => <td className="border border-gray-300 px-4 py-2" {...props} />
       }}
     >
       {cleanedContent}
