@@ -6,7 +6,26 @@ export default class ChatService {
     this.getAccessToken = getAccessToken;
     
     // Get the API endpoint from environment variables
-    this.apiEndpoint = process.env.REACT_APP_API_URL ;
+    this.apiEndpoint = process.env.REACT_APP_API_URL;
+    
+    // Initialize session ID to null, can be set later
+    this.sessionId = null;
+  }
+
+  /**
+   * Set the session ID for the chat
+   * @param {string} sessionId - The session ID to use for this chat instance
+   */
+  setSessionId(sessionId) {
+    this.sessionId = sessionId;
+  }
+
+  /**
+   * Get the current session ID
+   * @returns {string|null} The current session ID or null if not set
+   */
+  getSessionId() {
+    return this.sessionId;
   }
 
   async sendMessage(message, model, chatHistory = []) {
@@ -22,13 +41,22 @@ export default class ChatService {
       
       console.log(`Sending message to model: ${modelValue}`);
 
-      // Use the endpoint from environment variable with model as a string
-      const response = await api.post(this.apiEndpoint, {
+      // Create the payload exactly as required
+      const payload = {
+        session_id: this.sessionId || "",
         question: message,
-        model: modelValue,
-        chat_history: chatHistory
-      }, config);
+        model: modelValue
+      };
       
+      // Only include chat_history if needed and not empty
+      if (chatHistory && chatHistory.length > 0) {
+        payload.chat_history = chatHistory;
+      }
+
+      console.log('Sending payload:', payload);
+
+      // Use the endpoint from environment variable
+      const response = await api.post(this.apiEndpoint, payload, config);
       
       return this.processResponse(response.data);
     } catch (error) {
@@ -68,10 +96,16 @@ export default class ChatService {
     console.log('Processed citations:', processedCitations);
     console.log('Processed hyperlinks:', processedHyperlinks);
 
+    // Store the session ID if it was returned from the API
+    if (data.session_id) {
+      this.sessionId = data.session_id;
+    }
+
     return {
       answer: data.answer || '',
       citations: processedCitations,
       hyperlinks: processedHyperlinks,
+      session_id: data.session_id || this.sessionId,
       error: false
     };
   }

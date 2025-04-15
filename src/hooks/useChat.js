@@ -1,11 +1,12 @@
 /* useChat.js - Enhanced to auto-append reasoning payload */
  
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '../components/auth/AuthProvider';
 import ChatService from '../services/chatService';
 import VisualizationService from '../services/visualizationService';
 import ResponseFormatter from '../utils/formatters';
- 
+
+// STARTER_QUESTIONS constant omitted for brevity but should remain unchanged
 export const STARTER_QUESTIONS = [
   {
     id: 'fabric-reports-limitations',
@@ -237,16 +238,33 @@ export const STARTER_QUESTIONS = [
     ),
     question: 'What is the role of Azure Form Recognizer in document automation?'
   }
-];
- 
+]; 
 export function useChat(selectedModel) {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [sessionId, setSessionId] = useState(null);
  
+  // Creating chat service instance
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const chatService = new ChatService();
+
+  // Initialize or retrieve session ID on component mount
+  useEffect(() => {
+    // Try to get session ID from localStorage if available
+    const savedSessionId = localStorage.getItem('chat_session_id');
+    if (savedSessionId) {
+      setSessionId(savedSessionId);
+      chatService.setSessionId(savedSessionId);
+    } else {
+      // Generate a new session ID if none exists
+      const newSessionId = Date.now().toString();
+      setSessionId(newSessionId);
+      chatService.setSessionId(newSessionId);
+      localStorage.setItem('chat_session_id', newSessionId);
+    }
+  }, [chatService]);
  
   const sendMessage = useCallback(async (content, model) => {
     if (!content.trim() || !isAuthenticated) return;
@@ -269,14 +287,19 @@ export function useChat(selectedModel) {
     setError(null);
  
     try {
-      // eslint-disable-next-line no-unused-vars
-      const chatHistory = messages.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }));
+      // Set the session ID in the chat service before sending
+      if (sessionId) {
+        chatService.setSessionId(sessionId);
+      }
+      
+      const response = await chatService.sendMessage(finalContent, model || selectedModel);
  
-      const response = await chatService.sendMessage(finalContent, model)
- 
+      // Update session ID if returned in the response
+      if (response.session_id) {
+        setSessionId(response.session_id);
+        localStorage.setItem('chat_session_id', response.session_id);
+      }
+
       if (response.error) {
         setError(response.answer);
       } else {
@@ -304,7 +327,7 @@ export function useChat(selectedModel) {
     } finally {
       setIsLoading(false);
     }
-  }, [messages, chatService, isAuthenticated, user, selectedModel]);
+  }, [messages, chatService, isAuthenticated, user, selectedModel, sessionId]);
  
   const handleStarterQuestion = useCallback((question) => {
     sendMessage(question);
@@ -313,7 +336,13 @@ export function useChat(selectedModel) {
   const clearChat = useCallback(() => {
     setMessages([]);
     setError(null);
-  }, []);
+    
+    // Generate a new session ID when clearing the chat
+    const newSessionId = Date.now().toString();
+    setSessionId(newSessionId);
+    chatService.setSessionId(newSessionId);
+    localStorage.setItem('chat_session_id', newSessionId);
+  }, [chatService]);
  
   return {
     messages,
@@ -322,6 +351,7 @@ export function useChat(selectedModel) {
     sendMessage,
     handleStarterQuestion,
     clearChat,
+    sessionId,
     starterQuestions: STARTER_QUESTIONS
   };
 }
