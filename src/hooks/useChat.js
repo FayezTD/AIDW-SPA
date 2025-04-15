@@ -327,6 +327,7 @@ export function useChat(selectedModel) {
     } finally {
       setIsLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, chatService, isAuthenticated, user, selectedModel, sessionId]);
  
   const handleStarterQuestion = useCallback((question) => {
