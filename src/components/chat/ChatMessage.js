@@ -6,6 +6,31 @@ import CitationsList from './CitationsList';
 import TableRenderer from './TableRenderer';
 import GraphRenderer from './GraphRenderer';
 
+// PDF Viewer Component
+const PDFViewer = ({ sasUrl }) => {
+  const [isLoading, setIsLoading] = useState(true);
+  
+  const handleLoad = () => {
+    setIsLoading(false);
+  };
+  
+  return (
+    <div className="relative w-full h-[600px] border border-gray-300 rounded-lg bg-gray-50">
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
+        </div>
+      )}
+      <iframe 
+        src={sasUrl} 
+        className="w-full h-full rounded-lg"
+        onLoad={handleLoad}
+        title="PDF Document Viewer"
+      />
+    </div>
+  );
+};
+
 // Toast notification component with improved z-index
 const Toast = ({ message, visible, onClose }) => {
   useEffect(() => {
@@ -54,7 +79,84 @@ const ReasoningLoader = () => {
   return <div className="animate-pulse text-gray-500 italic">{message}</div>;
 };
 
-const ChatMessage = ({ message, isLoading }) => {
+// Component to handle all content formatting
+const FormattedContent = ({ content }) => {
+  // Clean up the content by removing unnecessary markdown
+  const cleanedContent = content
+    // Replace <br> tags with newlines
+    .replace(/<br>/g, '\n')
+    // Remove excessive asterisks (bold formatting)
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    // Clean up any consecutive newlines to a maximum of two
+    .replace(/\n{3,}/g, '\n\n');
+
+  return (
+    <ReactMarkdown 
+      remarkPlugins={[remarkGfm]}
+      components={{
+        // Override list items to ensure proper spacing
+        li: ({node, ...props}) => <li className="my-1" {...props} />,
+        // Override paragraphs to ensure proper spacing
+        p: ({node, ...props}) => <p className="my-2" {...props} />,
+        // Improve table rendering
+        table: ({node, ...props}) => <table className="border-collapse w-full my-4" {...props} />,
+        th: ({node, ...props}) => <th className="border border-gray-300 px-4 py-2 bg-gray-100" {...props} />,
+        td: ({node, ...props}) => <td className="border border-gray-300 px-4 py-2" {...props} />
+      }}
+    >
+      {cleanedContent}
+    </ReactMarkdown>
+  );
+};
+
+// Component to handle mixed content with tables, graphs, and PDFs
+const RichContent = ({ content, pdfSasUrl }) => {
+  // Check if this message contains a PDF viewer request
+  const hasPdf = pdfSasUrl && pdfSasUrl.trim() !== '';
+  
+  // Split content by all special markers
+  const parts = content.split(/(%%TABLE_JSON%%.*?%%END_TABLE%%|%%GRAPH_JSON%%.*?%%END_GRAPH%%)/s);
+
+  return (
+    <>
+      {hasPdf && (
+        <div className="mb-4">
+          <PDFViewer sasUrl={pdfSasUrl} />
+        </div>
+      )}
+      
+      {parts.map((part, index) => {
+        if (part.startsWith('%%TABLE_JSON%%')) {
+          // Extract the JSON string for tables
+          const jsonString = part.replace('%%TABLE_JSON%%', '').replace('%%END_TABLE%%', '');
+          try {
+            const tableData = JSON.parse(jsonString);
+            return <TableRenderer key={index} data={tableData} />;
+          } catch (e) {
+            console.error('Failed to parse table JSON:', e);
+            return <div key={index} className="text-red-500">Error rendering table</div>;
+          }
+        } else if (part.startsWith('%%GRAPH_JSON%%')) {
+          // Extract the JSON string for graphs
+          const jsonString = part.replace('%%GRAPH_JSON%%', '').replace('%%END_GRAPH%%', '');
+          try {
+            const graphData = JSON.parse(jsonString);
+            return <GraphRenderer key={index} data={graphData} />;
+          } catch (e) {
+            console.error('Failed to parse graph JSON:', e);
+            return <div key={index} className="text-red-500">Error rendering graph</div>;
+          }
+        } else if (part.trim()) {
+          // Render regular markdown content with cleanup
+          return <FormattedContent key={index} content={part} />;
+        }
+        return null;
+      })}
+    </>
+  );
+};
+
+const ChatMessage = ({ message, isLoading, onCitationClick, pdfSasUrl }) => {
   const { role, content, timestamp, citations } = message;
   const isUser = role === 'user';
   const [toast, setToast] = useState({ visible: false, message: '' });
@@ -67,8 +169,11 @@ const ChatMessage = ({ message, isLoading }) => {
     : '';
 
   // Check if the content contains special markers
-  const hasTable = content && content.includes('%%TABLE_JSON%%');
-  const hasGraph = content && content.includes('%%GRAPH_JSON%%');
+  const hasSpecialContent = content && (
+    content.includes('%%TABLE_JSON%%') || 
+    content.includes('%%GRAPH_JSON%%') || 
+    pdfSasUrl
+  );
 
   // Get available voices when component mounts
   useEffect(() => {
@@ -199,7 +304,7 @@ const ChatMessage = ({ message, isLoading }) => {
       
       // Optimize voice parameters for clarity and natural sound
       utterance.pitch = 1.5;      // Slightly higher pitch for female voice
-      utterance.rate = 1.40;      // Slightly slower for clarity
+      utterance.rate = 1.10;      // Slightly slower for clarity
       utterance.volume = 3.0;     // Maximum volume
       
       // Add natural pauses at punctuation
@@ -224,9 +329,16 @@ const ChatMessage = ({ message, isLoading }) => {
     }
   };
 
-  const handleFeedback = (isPositive) => {
-    // Here you would typically send feedback to your backend
-    showToast(isPositive ? 'Thank you for your feedback!' : 'We\'ll improve based on your feedback');
+  // const handleFeedback = (isPositive) => {
+  //   // Here you would typically send feedback to your backend
+  //   showToast(isPositive ? 'Thank you for your feedback!' : 'We\'ll improve based on your feedback');
+  // };
+
+  // Handler for citation clicks
+  const handleCitationClick = (citation) => {
+    if (onCitationClick) {
+      onCitationClick(citation);
+    }
   };
 
   // Cleanup speech synthesis when component unmounts
@@ -261,8 +373,8 @@ const ChatMessage = ({ message, isLoading }) => {
             <ReasoningLoader />
           ) : (
             <>
-              {hasTable || hasGraph ? (
-                <RichContent content={content} />
+              {hasSpecialContent ? (
+                <RichContent content={content} pdfSasUrl={pdfSasUrl} />
               ) : (
                 <FormattedContent content={content} />
               )}
@@ -271,7 +383,10 @@ const ChatMessage = ({ message, isLoading }) => {
         </div>
         {!isUser && citations && citations.length > 0 && (
           <div className="mt-3 w-full citation-list">
-            <CitationsList citations={citations} />
+            <CitationsList 
+              citations={citations} 
+              onCitationClick={handleCitationClick}
+            />
           </div>
         )}
         
@@ -318,7 +433,7 @@ const ChatMessage = ({ message, isLoading }) => {
               </span>
             </button>
             
-            <div className="ml-auto flex items-center gap-2">
+            {/* <div className="ml-auto flex items-center gap-2">
               <button 
                 onClick={() => handleFeedback(true)}
                 className="text-xs rounded-md bg-gray-100 p-1 hover:bg-green-100 transition-colors"
@@ -339,7 +454,7 @@ const ChatMessage = ({ message, isLoading }) => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2" />
                 </svg>
               </button>
-            </div>
+            </div> */}
           </div>
         )}
       </div>
@@ -349,74 +464,6 @@ const ChatMessage = ({ message, isLoading }) => {
         onClose={hideToast} 
       />
     </div>
-  );
-};
-
-// Component to handle all content formatting
-const FormattedContent = ({ content }) => {
-  // Clean up the content by removing unnecessary markdown
-  const cleanedContent = content
-    // Replace <br> tags with newlines
-    .replace(/<br>/g, '\n')
-    // Remove excessive asterisks (bold formatting)
-    .replace(/\*\*([^*]+)\*\*/g, '$1')
-    // Clean up any consecutive newlines to a maximum of two
-    .replace(/\n{3,}/g, '\n\n');
-
-  return (
-    <ReactMarkdown 
-      remarkPlugins={[remarkGfm]}
-      components={{
-        // Override list items to ensure proper spacing
-        li: ({node, ...props}) => <li className="my-1" {...props} />,
-        // Override paragraphs to ensure proper spacing
-        p: ({node, ...props}) => <p className="my-2" {...props} />,
-        // Improve table rendering
-        table: ({node, ...props}) => <table className="border-collapse w-full my-4" {...props} />,
-        th: ({node, ...props}) => <th className="border border-gray-300 px-4 py-2 bg-gray-100" {...props} />,
-        td: ({node, ...props}) => <td className="border border-gray-300 px-4 py-2" {...props} />
-      }}
-    >
-      {cleanedContent}
-    </ReactMarkdown>
-  );
-};
-
-// Component to handle mixed content with tables and graphs
-const RichContent = ({ content }) => {
-  // Split content by all special markers
-  const parts = content.split(/(%%TABLE_JSON%%.*?%%END_TABLE%%|%%GRAPH_JSON%%.*?%%END_GRAPH%%)/s);
-
-  return (
-    <>
-      {parts.map((part, index) => {
-        if (part.startsWith('%%TABLE_JSON%%')) {
-          // Extract the JSON string for tables
-          const jsonString = part.replace('%%TABLE_JSON%%', '').replace('%%END_TABLE%%', '');
-          try {
-            const tableData = JSON.parse(jsonString);
-            return <TableRenderer key={index} data={tableData} />;
-          } catch (e) {
-            console.error('Failed to parse table JSON:', e);
-            return <div key={index} className="text-red-500">Error rendering table</div>;
-          }
-        } else if (part.startsWith('%%GRAPH_JSON%%')) {
-          // Extract the JSON string for graphs
-          const jsonString = part.replace('%%GRAPH_JSON%%', '').replace('%%END_GRAPH%%', '');
-          try {
-            const graphData = JSON.parse(jsonString);
-            return <GraphRenderer key={index} data={graphData} />;
-          } catch (e) {
-            console.error('Failed to parse graph JSON:', e);
-            return <div key={index} className="text-red-500">Error rendering graph</div>;
-          }
-        } else if (part.trim()) {
-          // Render regular markdown content with cleanup
-          return <FormattedContent key={index} content={part} />;
-        }
-        return null;
-      })}
-    </>
   );
 };
 

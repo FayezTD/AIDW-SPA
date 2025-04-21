@@ -1,9 +1,16 @@
 import React from 'react';
 
-const CitationsList = ({ citations }) => {
+const CitationsList = ({ citations, onCitationClick }) => {
   if (!citations || citations.length === 0) {
     return null;
   }
+
+  const handleCitationClick = (citation, e) => {
+    e.preventDefault();
+    if (onCitationClick) {
+      onCitationClick(citation);
+    }
+  };
 
   return (
     <div className="citations my-4 p-4 bg-white border border-gray-200 rounded-lg shadow-sm w-full">
@@ -12,7 +19,16 @@ const CitationsList = ({ citations }) => {
         {citations.map((citation) => (
           <div
             key={citation.id}
-            className="citation-item flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors"
+            className="citation-item flex items-center p-2 hover:bg-gray-100 rounded-md transition-colors cursor-pointer"
+            onClick={(e) => handleCitationClick(citation, e)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                handleCitationClick(citation, e);
+              }
+            }}
+            aria-label={`View citation: ${citation.text}`}
           >
             <span className="citation-emoji text-2xl mr-2 flex-shrink-0">{citation.emoji}</span>
             <div className="citation-content flex-1 min-w-0 overflow-hidden">

@@ -1,28 +1,10 @@
 import React, { useState, useEffect } from 'react';
 
-const Sidebar = ({ onNewChat, activeChatId }) => {
-  const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem('theme') === 'dark';
-  });
-  
+const Sidebar = ({ onNewChat, activeChatId, className, sidebarCollapsed, setSidebarCollapsed }) => {
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     // Default to open on larger screens, closed on mobile
     return window.innerWidth >= 768;
   });
-
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    return localStorage.getItem('sidebarCollapsed') === 'true';
-  });
-
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [darkMode]);
 
   useEffect(() => {
     localStorage.setItem('sidebarCollapsed', sidebarCollapsed.toString());
@@ -54,9 +36,9 @@ const Sidebar = ({ onNewChat, activeChatId }) => {
       <div 
         className={`fixed md:static h-full z-40 transition-all duration-300 transform ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-        } ${darkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-200 text-black'} border-r ${
+        } bg-white border-gray-200 text-black border-r ${
           sidebarCollapsed ? 'w-16' : 'w-64'
-        } flex flex-col`}
+        } flex flex-col ${className || ''}`}
         role="navigation"
         aria-label="Main Navigation"
         style={{
@@ -64,36 +46,12 @@ const Sidebar = ({ onNewChat, activeChatId }) => {
           boxShadow: 'inset -8px 0 10px -10px rgba(0,0,0,0.4)'
         }}
       >
-        {/* Collapse/Expand button */}
-        <button 
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          onKeyDown={(e) => handleKeyDown(e, () => setSidebarCollapsed(!sidebarCollapsed))}
-          className={`absolute right-0 top-4 transform translate-x-1/2 flex items-center justify-center z-50 h-8 w-8 rounded-full shadow-md transition ${
-            darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'
-          }`}
-          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          tabIndex={2} // Matching your screenshot's numbering
-        >
-          {sidebarCollapsed ? (
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-            </svg>
-          ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-            </svg>
-          )}
-        </button>
-
         <div className={`p-4 flex justify-between items-center ${sidebarCollapsed ? 'justify-center' : ''}`}>
           <button
             onClick={onNewChat}
             onKeyDown={(e) => handleKeyDown(e, onNewChat)}
-            className={`w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium transition duration-150 ${
-              darkMode ? 'bg-gray-500 hover:bg-gray-700 text-white' : 'bg-gray-500 hover:bg-gray-700 text-white'
-            }`}
-            tabIndex={1} // Matching your screenshot's numbering
+            className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium transition duration-150 bg-gray-500 hover:bg-gray-700 text-white"
+            tabIndex={1}
             aria-label="New Chat"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${sidebarCollapsed ? '' : 'mr-2'}`} viewBox="0 0 20 20" fill="currentColor">
@@ -103,13 +61,13 @@ const Sidebar = ({ onNewChat, activeChatId }) => {
           </button>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+        <div className="flex-1 p-3 space-y-2">
           {/* Current Chat - Add tabIndex and keyboard handling */}
           <div 
             className={`p-2 rounded-md cursor-pointer transition ${
-              activeChatId === 'current' ? (darkMode ? 'bg-gray-700' : 'bg-gray-100') : (darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50')
+              activeChatId === 'current' ? 'bg-gray-100' : 'hover:bg-gray-50'
             }`}
-            tabIndex={3} // Matching your screenshot's numbering
+            tabIndex={3}
             role="button"
             aria-label="Current Chat"
             aria-current={activeChatId === 'current' ? 'page' : undefined}
@@ -129,37 +87,43 @@ const Sidebar = ({ onNewChat, activeChatId }) => {
             ) : (
               <>
                 <div className="text-sm font-medium truncate">Current Chat</div>
-                <div className={`text-xs truncate ${darkMode ? 'text-white' : 'text-[#0f0f0f]'}`}>AI-driven workplace assistant</div>
+                <div className="text-xs truncate text-[#0f0f0f]">AI-driven workplace assistant</div>
               </>
             )}
           </div>
         </div>
 
-        <div className={`p-4 border-t flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'}`} style={{ borderColor: darkMode ? 'rgb(55, 65, 81)' : 'rgb(229, 231, 235)' }}>
+        <div className={`p-4 border-t flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'}`} style={{ borderColor: 'rgb(229, 231, 235)' }}>
           {!sidebarCollapsed && (
-            <div className={`text-xs transition ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+            <div className="text-xs transition text-gray-900">
               AIDW Assistant v1.0
             </div>
           )}
           
-          {/* Theme Toggle Button - Add tabIndex */}
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            onKeyDown={(e) => handleKeyDown(e, () => setDarkMode(!darkMode))}
-            className="p-2 rounded-md transition hover:bg-opacity-20"
-            aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-            title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-            tabIndex={3} // Matching your screenshot's numbering
+          {/* Rectangular Collapse/Expand button like Claude's sidebar */}
+          <button 
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            onKeyDown={(e) => handleKeyDown(e, () => setSidebarCollapsed(!sidebarCollapsed))}
+            className="px-3 py-1 rounded border border-gray-300 bg-white text-gray-600 flex items-center justify-center text-xs font-medium hover:bg-gray-50 transition-colors"
+            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            tabIndex={2}
           >
-            {darkMode ? (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M10 2a8 8 0 107.938 6.732A7 7 0 0110 18a8 8 0 000-16z" />
-              </svg>
-            ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-700" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v1a1 1 0 11-2 0V4a1 1 0 011-1zM4.222 5.222a1 1 0 011.414 0l.707.707a1 1 0 01-1.414 1.414l-.707-.707a1 1 0 010-1.414zM3 10a1 1 0 011-1h1a1 1 0 110 2H4a1 1 0 01-1-1zm11-6a1 1 0 011 1v1a1 1 0 11-2 0V4a1 1 0 011-1zm3.778 1.778a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM16 10a1 1 0 011-1h1a1 1 0 110 2h-1a1 1 0 01-1-1zm-3.778 6.222a1 1 0 01-1.414 0l-.707-.707a1 1 0 011.414-1.414l.707.707a1 1 0 010 1.414zM10 16a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM4.222 14.778a1 1 0 000 1.414l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 0z" clipRule="evenodd" />
-              </svg>
-            )}
+            {sidebarCollapsed ? (
+  <>
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+    </svg>
+    <span className="hidden md:inline"></span>
+  </>
+) : (
+  <>
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+    </svg>
+    <span></span>
+  </>
+)}
           </button>
         </div>
       </div>
