@@ -141,7 +141,7 @@ const SecureDocumentViewer = ({ url, onClose, filename }) => {
           let filePath = decodeURIComponent(idMatch[1]);
           
           // Extract the domain
-          const domainMatch = sharePointUrl.match(/(https?:\/\/[^\/]+)/);
+          const domainMatch = sharePointUrl.match(/(https?:\/\/[^/]+)/);
           const domain = domainMatch ? domainMatch[1] : '';
           
           if (domain && filePath) {
@@ -180,7 +180,7 @@ const SecureDocumentViewer = ({ url, onClose, filename }) => {
           return documentUrl;
         } else if (documentUrl.includes('/sites/')) {
           // Extract the site URL up to '/sites/sitename'
-          const siteMatch = documentUrl.match(/(https?:\/\/.*?\/sites\/[^\/]+)/);
+          const siteMatch = documentUrl.match(/(https?:\/\/.*?\/sites\/[^/]+)/);
           if (siteMatch) {
             baseUrl = siteMatch[1];
             // Get the document path after the site URL
@@ -214,7 +214,7 @@ const SecureDocumentViewer = ({ url, onClose, filename }) => {
           return documentUrl;
         } else if (documentUrl.includes('/sites/')) {
           // Extract the site URL up to '/sites/sitename'
-          const siteMatch = documentUrl.match(/(https?:\/\/.*?\/sites\/[^\/]+)/);
+          const siteMatch = documentUrl.match(/(https?:\/\/.*?\/sites\/[^/]+)/);
           if (siteMatch) {
             baseUrl = siteMatch[1];
             // Get the document path after the site URL
