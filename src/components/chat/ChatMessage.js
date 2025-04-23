@@ -5,6 +5,7 @@ import { formatDistanceToNow } from 'date-fns';
 import CitationsList from './CitationsList';
 import TableRenderer from './TableRenderer';
 import GraphRenderer from './GraphRenderer';
+import SecureDocumentViewer from './SecureDocumentViewer'; // Import the new component
 
 // PDF Viewer Component
 const PDFViewer = ({ sasUrl }) => {
@@ -157,11 +158,12 @@ const RichContent = ({ content, pdfSasUrl }) => {
 };
 
 const ChatMessage = ({ message, isLoading, onCitationClick, pdfSasUrl }) => {
-  const { role, content, timestamp, citations } = message;
+  const { role, content, timestamp, citations, hyperlinks } = message;
   const isUser = role === 'user';
   const [toast, setToast] = useState({ visible: false, message: '' });
   const [isPlaying, setIsPlaying] = useState(false);
   const [voices, setVoices] = useState([]);
+  const [documentToView, setDocumentToView] = useState(null);
   const speechSynthRef = useRef(null);
 
   const formattedTime = timestamp
@@ -303,9 +305,9 @@ const ChatMessage = ({ message, isLoading, onCitationClick, pdfSasUrl }) => {
       }
       
       // Optimize voice parameters for clarity and natural sound
-      utterance.pitch = 1.5;      // Slightly higher pitch for female voice
-      utterance.rate = 1.10;      // Slightly slower for clarity
-      utterance.volume = 3.0;     // Maximum volume
+      utterance.pitch = 1.5;      
+      utterance.rate = 1.10;      
+      utterance.volume = 3.0;     
       
       // Add natural pauses at punctuation
       utterance.onboundary = function(event) {
@@ -329,16 +331,42 @@ const ChatMessage = ({ message, isLoading, onCitationClick, pdfSasUrl }) => {
     }
   };
 
-  // const handleFeedback = (isPositive) => {
-  //   // Here you would typically send feedback to your backend
-  //   showToast(isPositive ? 'Thank you for your feedback!' : 'We\'ll improve based on your feedback');
-  // };
-
-  // Handler for citation clicks
+  // Handler for citation clicks - updated to handle document viewing
   const handleCitationClick = (citation) => {
+    // If citation is a string, check if it has a corresponding hyperlink
+    if (typeof citation === 'string' && hyperlinks && hyperlinks.length > 0) {
+      // Find index of citation in citations array
+      const index = citations.findIndex(c => c === citation);
+      
+      // If found and there's a corresponding hyperlink at the same index
+      if (index !== -1 && index < hyperlinks.length) {
+        // Set the document to view with the URL
+        setDocumentToView({
+          url: hyperlinks[index],
+          filename: citation
+        });
+        return;
+      }
+    }
+    
+    // If citation is an object with a URL property
+    if (citation && citation.url) {
+      setDocumentToView({
+        url: citation.url,
+        filename: citation.title || 'Document'
+      });
+      return;
+    }
+    
+    // Fallback to original behavior if onCitationClick is provided
     if (onCitationClick) {
       onCitationClick(citation);
     }
+  };
+
+  // Close the document viewer
+  const handleCloseDocumentViewer = () => {
+    setDocumentToView(null);
   };
 
   // Cleanup speech synthesis when component unmounts
@@ -385,6 +413,7 @@ const ChatMessage = ({ message, isLoading, onCitationClick, pdfSasUrl }) => {
           <div className="mt-3 w-full citation-list">
             <CitationsList 
               citations={citations} 
+              hyperlinks={hyperlinks || []}
               onCitationClick={handleCitationClick}
             />
           </div>
@@ -432,32 +461,20 @@ const ChatMessage = ({ message, isLoading, onCitationClick, pdfSasUrl }) => {
                 )}
               </span>
             </button>
-            
-            {/* <div className="ml-auto flex items-center gap-2">
-              <button 
-                onClick={() => handleFeedback(true)}
-                className="text-xs rounded-md bg-gray-100 p-1 hover:bg-green-100 transition-colors"
-                aria-label="Thumbs up"
-                title="Helpful response"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-                </svg>
-              </button>
-              <button 
-                onClick={() => handleFeedback(false)}
-                className="text-xs rounded-md bg-gray-100 p-1 hover:bg-red-100 transition-colors"
-                aria-label="Thumbs down"
-                title="Unhelpful response"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2" />
-                </svg>
-              </button>
-            </div> */}
           </div>
         )}
       </div>
+      
+      {/* Secure Document Viewer */}
+      {documentToView && (
+        <SecureDocumentViewer 
+          url={documentToView.url}
+          filename={documentToView.filename}
+          onClose={handleCloseDocumentViewer}
+        />
+      )}
+      
+      {/* Toast Notification */}
       <Toast 
         message={toast.message} 
         visible={toast.visible} 

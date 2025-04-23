@@ -1,4 +1,4 @@
-/* useChat.js - Enhanced to auto-append reasoning payload */
+/* useChat.js - Enhanced to handle new chat history format */
  
 import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '../components/auth/AuthProvider';
@@ -6,20 +6,8 @@ import ChatService from '../services/chatService';
 import VisualizationService from '../services/visualizationService';
 import ResponseFormatter from '../utils/formatters';
 
-// STARTER_QUESTIONS constant omitted for brevity but should remain unchanged
+// STARTER_QUESTIONS constant remains unchanged
 export const STARTER_QUESTIONS = [
-  {
-    id: 'fabric-reports-limitations',
-    question: 'What is a task flow in Microsoft Fabric?'
-  },
-  {
-    id: 'fabric-task-flow',
-    question: 'What are the best practices for security architecture in Azure?'
-  },
-  {
-    id: 'azure-security-best-practices',
-    question: 'What is the role of Azure Form Recognizer in document automation?'
-  },
   {
     id: 'azure-threat-detection',
     question: 'Which Azure services are commonly used in threat detection and response?'
@@ -33,33 +21,17 @@ export const STARTER_QUESTIONS = [
     question: 'What are the resiliency patterns mentioned in Azure architectural designs? Please tabulate the response.'
   }
 ]; 
+
 export function useChat(selectedModel) {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [sessionId, setSessionId] = useState(null);
  
   // Creating chat service instance
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const chatService = new ChatService();
 
-  // Initialize or retrieve session ID on component mount
-  useEffect(() => {
-    // Try to get session ID from localStorage if available
-    const savedSessionId = localStorage.getItem('chat_session_id');
-    if (savedSessionId) {
-      setSessionId(savedSessionId);
-      chatService.setSessionId(savedSessionId);
-    } else {
-      // Generate a new session ID if none exists
-      const newSessionId = Date.now().toString();
-      setSessionId(newSessionId);
-      chatService.setSessionId(newSessionId);
-      localStorage.setItem('chat_session_id', newSessionId);
-    }
-  }, [chatService]);
- 
   const sendMessage = useCallback(async (content, model) => {
     if (!content.trim() || !isAuthenticated) return;
  
@@ -81,18 +53,10 @@ export function useChat(selectedModel) {
     setError(null);
  
     try {
-      // Set the session ID in the chat service before sending
-      if (sessionId) {
-        chatService.setSessionId(sessionId);
-      }
+      // Convert messages to the new chat_history format
+      const chatHistory = convertMessagesToHistory(messages);
       
-      const response = await chatService.sendMessage(finalContent, model || selectedModel);
- 
-      // Update session ID if returned in the response
-      if (response.session_id) {
-        setSessionId(response.session_id);
-        localStorage.setItem('chat_session_id', response.session_id);
-      }
+      const response = await chatService.sendMessage(finalContent, model || selectedModel, chatHistory);
 
       if (response.error) {
         setError(response.answer);
@@ -111,6 +75,7 @@ export function useChat(selectedModel) {
           role: 'assistant',
           content: processedAnswer,
           citations: formattedCitations,
+          intent: response.intent || 'General', // Store intent from response
           timestamp: new Date()
         };
  
@@ -122,7 +87,7 @@ export function useChat(selectedModel) {
       setIsLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages, chatService, isAuthenticated, user, selectedModel, sessionId]);
+  }, [messages, chatService, isAuthenticated, user, selectedModel]);
  
   const handleStarterQuestion = useCallback((question) => {
     sendMessage(question);
@@ -131,13 +96,44 @@ export function useChat(selectedModel) {
   const clearChat = useCallback(() => {
     setMessages([]);
     setError(null);
+  }, []);
+  
+  // Helper function to convert internal message format to the new chat_history format
+  const convertMessagesToHistory = (messages) => {
+    if (!messages || messages.length === 0) return [];
     
-    // Generate a new session ID when clearing the chat
-    const newSessionId = Date.now().toString();
-    setSessionId(newSessionId);
-    chatService.setSessionId(newSessionId);
-    localStorage.setItem('chat_session_id', newSessionId);
-  }, [chatService]);
+    const chatHistory = [];
+    
+    // Process messages in pairs (user->assistant)
+    for (let i = 0; i < messages.length; i += 2) {
+      const userMessage = messages[i];
+      const assistantMessage = messages[i + 1];
+      
+      // Skip if we don't have a complete pair
+      if (!userMessage || userMessage.role !== 'user') continue;
+      if (!assistantMessage || assistantMessage.role !== 'assistant') continue;
+      
+      const historyEntry = {
+        response: {
+          user: userMessage.content,
+          bot: assistantMessage.content
+        },
+        intent: assistantMessage.intent || 'General',
+        time: formatTime(userMessage.timestamp)
+      };
+      
+      chatHistory.push(historyEntry);
+    }
+    
+    return chatHistory;
+  };
+  
+  // Helper function to format timestamp to HH:MM:SS
+  const formatTime = (timestamp) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    return date.toTimeString().split(' ')[0];
+  };
  
   return {
     messages,
@@ -146,7 +142,6 @@ export function useChat(selectedModel) {
     sendMessage,
     handleStarterQuestion,
     clearChat,
-    sessionId,
     starterQuestions: STARTER_QUESTIONS
   };
 }

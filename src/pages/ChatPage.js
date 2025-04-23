@@ -5,6 +5,7 @@ import ChatInput from '../components/chat/ChatInput';
 import { useChat, STARTER_QUESTIONS } from '../hooks/useChat';
 import Header from '../components/layout/Header';
 import { useAuth } from '../components/auth/AuthProvider';
+import ChatService from '../services/chatService'; // Import ChatService
 import '../styles/chatBackground.css';
 
 const ChatPage = () => {
@@ -15,8 +16,12 @@ const ChatPage = () => {
     sendMessage,
     handleStarterQuestion,
     clearChat,
+    chatService, // Extract chatService from useChat if available
   } = useChat();
  
+  // Create a reference to the ChatService instance if not provided by useChat
+  const chatServiceRef = useRef(chatService || new ChatService());
+  
   const { isAuthenticated, login } = useAuth();
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
@@ -89,6 +94,16 @@ const ChatPage = () => {
   const handleSidebarToggle = () => {
     setSidebarCollapsed(!sidebarCollapsed);
   };
+  
+  // Handle new chat with request cancellation
+  const handleNewChat = () => {
+    // Cancel any ongoing requests
+    if (chatServiceRef.current && typeof chatServiceRef.current.cancelAllRequests === 'function') {
+      chatServiceRef.current.cancelAllRequests();
+    }
+    // Then clear the chat
+    clearChat();
+  };
  
   if (!isAuthenticated) {
     return (
@@ -122,7 +137,8 @@ const ChatPage = () => {
           style={{ paddingTop: '64px' }} // Height of the header
         >
           <Sidebar
-            onNewChat={clearChat}
+            onNewChat={handleNewChat} // Use the enhanced new chat handler
+            chatService={chatServiceRef.current} // Pass chatService to Sidebar
             activeChatId="current"
             starterQuestions={STARTER_QUESTIONS.slice(0, 4)}
             onSelectQuestion={handleStarterQuestion}
@@ -174,74 +190,50 @@ const ChatPage = () => {
                 </div>
                 
                 <div className="mt-12">
-                  <h3 className="text-2xl font-bold text-cyan-700 mb-8 text-left transform translate-z-8">Choose your query type</h3>
+                  {/* <h3 className="text-2xl font-bold text-cyan-700 mb-8 text-left transform translate-z-8">Choose your query type</h3> */}
                   
-                  {/* V-shaped arrangement (3-2-1) of starter questions */}
-<div className="flex flex-col items-center space-y-6">
-  {/* First row - 3 cards */}
-  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 w-full">
-    {STARTER_QUESTIONS.slice(0, 3).map((question) => (
-      <button
-        key={question.id}
-        onClick={() => handleStarterQuestion(question.question)}
-        className="starter-question flex flex-col items-center p-4 md:p-6 text-left bg-black bg-opacity-5 backdrop-filter backdrop-blur-lg rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300 border border-gray-200 border-opacity-20"
-        style={{ maxHeight: '70px', height: '80px' }}
-      >
-        <div className="w-full flex items-center">
-          <div className="flex-shrink-0 transform hover:rotate-6 transition-transform duration-300 mr-4">
-            {question.icon}
-          </div>
-          <p className="text-black text-sm md:text-md">
-            {question.question.length > 100 ? `${question.question.substring(0, 100)}...` : question.question}
-          </p>
-        </div>
-      </button>
-    ))}
-  </div>
+                  {/* V-shaped arrangement (2-1) of starter questions */}
+                  <div className="flex flex-col items-center space-y-6">
+                    {/* First row - 2 cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 w-full">
+                      {STARTER_QUESTIONS.slice(0, 2).map((question) => (
+                        <button
+                          key={question.id}
+                          onClick={() => handleStarterQuestion(question.question)}
+                          className="starter-question flex flex-col items-center p-4 md:p-6 text-left bg-black bg-opacity-5 backdrop-filter backdrop-blur-lg rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300 border border-gray-200 border-opacity-20"
+                          style={{ minHeight: '70px', height: '80px' }}
+                        >
+                          <div className="w-full flex items-center">
+                            <div className="flex-shrink-0 transform hover:rotate-6 transition-transform duration-300 mr-4">
+                              {question.icon}
+                            </div>
+                            <p className="text-black text-sm md:text-md">
+                              {question.question.length > 100 ? `${question.question.substring(0, 100)}...` : question.question}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
 
-  {/* Second row - 2 cards */}
-  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 w-4/5">
-    {STARTER_QUESTIONS.slice(3, 5).map((question) => (
-      <button
-        key={question.id}
-        onClick={() => handleStarterQuestion(question.question)}
-        className="starter-question flex flex-col items-center p-4 md:p-6 text-left bg-black bg-opacity-5 backdrop-filter backdrop-blur-lg rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300 border border-gray-200 border-opacity-20"
-        style={{ maxHeight: '70px', height: '80px' }}
-      >
-        <div className="w-full flex items-center">
-          <div className="flex-shrink-0 transform hover:rotate-6 transition-transform duration-300 mr-4">
-            {question.icon}
-          </div>
-          <p className="text-black text-sm md:text-md">
-            {question.question.length > 100 ? `${question.question.substring(0, 100)}...` : question.question}
-          </p>
-        </div>
-      </button>
-    ))}
-  </div>
-
-  {/* Third row - 1 card */}
-  {STARTER_QUESTIONS.length >= 6 && (
-    <div className="w-3/5">
-      <button
-        key={STARTER_QUESTIONS[5].id}
-        onClick={() => handleStarterQuestion(STARTER_QUESTIONS[5].question)}
-        className="starter-question flex flex-col items-center p-4 md:p-6 text-left bg-black bg-opacity-5 backdrop-filter backdrop-blur-lg rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300 border border-gray-200 border-opacity-20 w-full"
-        style={{ maxHeight: '70px', height: '80px' }}
-      >
-        <div className="w-full flex items-center">
-          <div className="flex-shrink-0 transform hover:rotate-6 transition-transform duration-300 mr-4">
-            {STARTER_QUESTIONS[5].icon}
-          </div>
-          <p className="text-black text-sm md:text-md">
-            {STARTER_QUESTIONS[5].question.length > 120 ? `${STARTER_QUESTIONS[5].question.substring(0, 100)}...` : STARTER_QUESTIONS[5].question}
-          </p>
-        </div>
-      </button>
-    </div>
-  )}
-</div>
-
+                    {/* Second row - 1 card */}
+                    <div className="w-3/5">
+                      <button
+                        key={STARTER_QUESTIONS[2].id}
+                        onClick={() => handleStarterQuestion(STARTER_QUESTIONS[2].question)}
+                        className="starter-question flex flex-col items-center p-4 md:p-6 text-left bg-black bg-opacity-5 backdrop-filter backdrop-blur-lg rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300 border border-gray-200 border-opacity-20 w-full"
+                        style={{ minHeight: '70px', height: '80px' }}
+                      >
+                        <div className="w-full flex items-center">
+                          <div className="flex-shrink-0 transform hover:rotate-6 transition-transform duration-300 mr-4">
+                            {STARTER_QUESTIONS[2].icon}
+                          </div>
+                          <p className="text-black text-sm md:text-md">
+                            {STARTER_QUESTIONS[2].question.length > 120 ? `${STARTER_QUESTIONS[2].question.substring(0, 100)}...` : STARTER_QUESTIONS[2].question}
+                          </p>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

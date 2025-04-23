@@ -169,6 +169,22 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
     }
   };
 
+  // Toggle voice recognition (start/stop) - New implementation for push-to-record
+  const toggleVoiceRecording = () => {
+    if (isLoading) return;
+    
+    if (isListening) {
+      // If we're listening, stop and submit the message
+      stopListening();
+      if (message.trim()) {
+        handleSubmit();
+      }
+    } else {
+      // If we're not listening, start listening
+      startListening();
+    }
+  };
+
   // Start voice recognition
   const startListening = () => {
     if (!recognitionRef.current || isLoading) return;
@@ -239,35 +255,6 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
     }
   };
 
-  // Handle mouse events for press-and-hold functionality
-  const handleVoiceButtonMouseDown = (e) => {
-    e.preventDefault(); // Prevent default to avoid button focus issues
-    startListening();
-  };
-
-  const handleVoiceButtonMouseUp = (e) => {
-    e.preventDefault();
-    stopListening();
-  };
-
-  const handleVoiceButtonMouseLeave = (e) => {
-    // Stop recording if mouse leaves the button while pressed
-    if (isListening) {
-      stopListening();
-    }
-  };
-
-  // Handle touch events for mobile devices
-  const handleVoiceButtonTouchStart = (e) => {
-    e.preventDefault(); // Prevent default to avoid scrolling issues on mobile
-    startListening();
-  };
-
-  const handleVoiceButtonTouchEnd = (e) => {
-    e.preventDefault();
-    stopListening();
-  };
-
   // Handle model change
   const handleModelChange = (newModel) => {
     console.log(`ChatInput: Model changed to: ${newModel}`);
@@ -305,6 +292,13 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
     setMessage('');
     textareaRef.current.focus();
   };
+
+  // Handle stop generation
+  // const handleStopGeneration = () => {
+  //   if (onStopGeneration && isLoading) {
+  //     onStopGeneration();
+  //   }
+  // };
 
   // Handle keyboard navigation
   const handleKeyDown = (e) => {
@@ -380,18 +374,10 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
 
   // Handle keyboard support for voice button
   const handleVoiceButtonKeyDown = (e) => {
-    // Space or Enter press should start recording
-    if ((e.key === ' ' || e.key === 'Enter') && !isListening) {
+    // Space or Enter press should toggle recording
+    if (e.key === ' ' || e.key === 'Enter') {
       e.preventDefault();
-      startListening();
-    }
-  };
-  
-  const handleVoiceButtonKeyUp = (e) => {
-    // Space or Enter release should stop recording
-    if ((e.key === ' ' || e.key === 'Enter') && isListening) {
-      e.preventDefault();
-      stopListening();
+      toggleVoiceRecording();
     }
   };
 
@@ -411,49 +397,64 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
         />
 
         <div className="absolute bottom-3 right-3 flex space-x-2">
+          {/* Voice Button - Changed to toggle behavior */}
           <button
             type="button"
             ref={voiceButtonRef}
             className={`p-2 rounded-lg ${
               isListening 
-                ? 'bg-red-500 text-white animate-pulse' 
+                ? 'bg-red-500 text-white' 
                 : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
             } transition-colors focus:ring-2 focus:ring-primary focus:outline-none`}
+            onClick={toggleVoiceRecording}
             disabled={isLoading}
-            title={isListening ? "Recording in progress (release to stop)" : "Press and hold to record voice"}
-            aria-label={isListening ? "Release to stop recording" : "Press and hold to record voice"}
+            title={isListening ? "Recording in progress (click to stop and send)" : "Click to start recording voice"}
+            aria-label={isListening ? "Stop recording and send" : "Start recording voice"}
             aria-pressed={isListening}
             data-testid="voice-button"
-            onMouseDown={handleVoiceButtonMouseDown}
-            onMouseUp={handleVoiceButtonMouseUp}
-            onMouseLeave={handleVoiceButtonMouseLeave}
-            onTouchStart={handleVoiceButtonTouchStart}
-            onTouchEnd={handleVoiceButtonTouchEnd}
             onKeyDown={handleVoiceButtonKeyDown}
-            onKeyUp={handleVoiceButtonKeyUp}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
             </svg>
           </button>
 
-          <button
-            type="button"
-            ref={sendButtonRef}
-            onClick={handleSubmit}
-            className={`p-2 rounded-lg ${
-              isLoading || !message.trim() ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-primary text-white hover:bg-secondary'
-            } transition-colors focus:ring-2 focus:ring-[#20B2AA] focus:outline-none`}
-            disabled={isLoading || !message.trim()}
-            title="Send message"
-            aria-label="Send message"
-            data-testid="send-button"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transform: 'rotate(45deg)'}}>
+          {/* Send Button */}
+          {!isLoading && (
+            <button
+              type="button"
+              ref={sendButtonRef}
+              onClick={handleSubmit}
+              className={`p-2 rounded-lg ${
+                isLoading || !message.trim() ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-primary text-white hover:bg-secondary'
+              } transition-colors focus:ring-2 focus:ring-[#20B2AA] focus:outline-none`}
+              disabled={isLoading || !message.trim()}
+              title="Send message"
+              aria-label="Send message"
+              data-testid="send-button"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{transform: 'rotate(45deg)'}}>
                 <path d="M22 2L11 13"></path>
                 <polygon points="22 2 2 9 11 13 15 22 22 2"></polygon>
-            </svg>
-          </button>
+              </svg>
+            </button>
+          )}
+
+          {/* Stop Generation Button - Only appears when loading */}
+          {/* {isLoading && (
+            <button
+              type="button"
+              onClick={handleStopGeneration}
+              className="p-2 rounded-lg bg-gray-200 text-gray-600 hover:bg-gray-300 transition-colors focus:ring-2 focus:ring-primary focus:outline-none"
+              title="Stop generation"
+              aria-label="Stop generation"
+              data-testid="stop-button"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
+              </svg>
+            </button>
+          )} */}
         </div>
         
         <div className="absolute left-3 bottom-3 flex space-x-2 items-center">
@@ -483,16 +484,17 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
         </div>
       </div>
       
+      {/* Recording indicator without animation */}
       {isListening && (
         <div className="mt-1 text-xs text-black flex items-center" role="status" aria-live="assertive">
-          <div className="w-2 h-2 rounded-full bg-red-500 mr-1 animate-pulse"></div>
-          <span className="font-medium">Recording...</span> <span className="ml-1">(release to stop)</span>
+          <div className="w-2 h-2 rounded-full bg-red-500 mr-1"></div>
+          <span className="font-medium">Recording...</span> <span className="ml-1">(click to stop and send)</span>
         </div>
       )}
       
       {/* Accessibility instructions */}
       <div className="sr-only" aria-live="polite">
-        {isListening ? 'Voice recording active. Release to stop recording.' : 'Press and hold voice button to record.'}
+        {isListening ? 'Voice recording active. Click again to stop recording and send.' : 'Click voice button to start recording.'}
         Use arrow keys to navigate between input field and buttons.
         Current Model selected: {selectedModel}
       </div>

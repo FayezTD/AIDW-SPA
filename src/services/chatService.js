@@ -8,30 +8,34 @@ export default class ChatService {
     // Get the API endpoint from environment variables
     this.apiEndpoint = process.env.REACT_APP_API_URL;
     
-    // Initialize session ID to null, can be set later
-    this.sessionId = null;
+    // Store active AbortController instances
+    this.activeRequests = new Set();
   }
 
   /**
-   * Set the session ID for the chat
-   * @param {string} sessionId - The session ID to use for this chat instance
+   * Cancel all ongoing API requests
    */
-  setSessionId(sessionId) {
-    this.sessionId = sessionId;
-  }
-
-  /**
-   * Get the current session ID
-   * @returns {string|null} The current session ID or null if not set
-   */
-  getSessionId() {
-    return this.sessionId;
+  cancelAllRequests() {
+    console.log(`Cancelling ${this.activeRequests.size} active requests`);
+    this.activeRequests.forEach(controller => {
+      controller.abort();
+    });
+    this.activeRequests.clear();
   }
 
   async sendMessage(message, model, chatHistory = []) {
     try {
+      // Create an AbortController for this request
+      const abortController = new AbortController();
+      
+      // Add this controller to our active requests set
+      this.activeRequests.add(abortController);
+      
       // Create a config object that might or might not include getAccessToken
-      const config = {};
+      const config = {
+        signal: abortController.signal // Add abort signal to request config
+      };
+      
       if (this.getAccessToken) {
         config.getAccessToken = this.getAccessToken;
       }
@@ -41,25 +45,35 @@ export default class ChatService {
       
       console.log(`Sending message to model: ${modelValue}`);
 
-      // Create the payload exactly as required
+      // Create the payload according to the new format
       const payload = {
-        session_id: this.sessionId || "",
         question: message,
-        model: modelValue
+        model: modelValue,
+        chat_history: chatHistory // Now expecting the proper chat_history format
       };
       
-      // Only include chat_history if needed and not empty
-      if (chatHistory && chatHistory.length > 0) {
-        payload.chat_history = chatHistory;
-      }
-
       console.log('Sending payload:', payload);
 
       // Use the endpoint from environment variable
       const response = await api.post(this.apiEndpoint, payload, config);
       
+      // Remove this controller from active requests as it completed successfully
+      this.activeRequests.delete(abortController);
+      
       return this.processResponse(response.data);
     } catch (error) {
+      // Check if this was caused by our abort controller
+      if (error.name === 'AbortError' || error.name === 'CanceledError') {
+        console.log('Request was cancelled');
+        return {
+          answer: '',
+          citations: [],
+          hyperlinks: [],
+          error: false,
+          cancelled: true
+        };
+      }
+      
       console.error(`Error sending message to ${model}:`, error);
       return {
         answer: `An error occurred while processing your message with ${model}. Please try again later.`,
@@ -81,31 +95,35 @@ export default class ChatService {
         error: true
       };
     }
-
-    // Extract citations and hyperlinks
-    const citations = data.citation ? 
+  
+    // Handle the new response format
+    // The new response appears to be simpler: {"answer": "...", "intent": "..."}
+    // We'll still maintain backwards compatibility with the old format
+    
+    // Extract citations and hyperlinks if they exist in the response
+    let citations = data.citation ? 
       (Array.isArray(data.citation) ? data.citation : [data.citation]) : [];
     
-    const hyperlinks = data.hyperlink ? 
+    let hyperlinks = data.hyperlink ? 
       (Array.isArray(data.hyperlink) ? data.hyperlink : [data.hyperlink]) : [];
     
-    // Split citations and hyperlinks if they're comma-separated strings
+    // Filter out empty citations and hyperlinks
+    citations = citations.filter(item => item && item.trim() !== '');
+    hyperlinks = hyperlinks.filter(item => item && item.trim() !== '');
+    
+    // Process citations and hyperlinks
     const processedCitations = this.processCitationStrings(citations);
     const processedHyperlinks = this.processCitationStrings(hyperlinks);
     
     console.log('Processed citations:', processedCitations);
     console.log('Processed hyperlinks:', processedHyperlinks);
-
-    // Store the session ID if it was returned from the API
-    if (data.session_id) {
-      this.sessionId = data.session_id;
-    }
-
+    
+    // Include intent in the return object if it exists
     return {
       answer: data.answer || '',
       citations: processedCitations,
       hyperlinks: processedHyperlinks,
-      session_id: data.session_id || this.sessionId,
+      intent: data.intent || null,
       error: false
     };
   }

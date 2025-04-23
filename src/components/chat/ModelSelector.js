@@ -43,20 +43,22 @@ const ModelSelector = ({ selectedModel, onModelChange, isLoading }) => {
         type="button"
         onClick={handleToggleDropdown}
         disabled={isLoading}
-        className="flex items-center space-x-1 text-xs font-medium px-3 py-1 border border-gray-300 rounded-full 
+        className="flex items-center justify-between w-36 text-xs font-medium px-3 py-1 border border-gray-300 rounded-full 
                   hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary bg-white
                   disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-label="Select AI model"
       >
-        <span className="mr-1">Model:</span>
-        <span className="font-medium">{currentModel.name}</span>
+        <div className="flex items-center">
+          <span className="mr-1">Model:</span>
+          <span className="font-medium truncate">{currentModel.name}</span>
+        </div>
         
         {/* Up/down arrow icon */}
         <svg 
           xmlns="http://www.w3.org/2000/svg" 
-          className={`h-3 w-3 transition-transform ${isOpen ? 'transform rotate-180' : ''}`} 
+          className={`h-3 w-3 transition-transform flex-shrink-0 ${isOpen ? 'transform rotate-180' : ''}`} 
           fill="none" 
           viewBox="0 0 24 24" 
           stroke="currentColor"
@@ -67,7 +69,7 @@ const ModelSelector = ({ selectedModel, onModelChange, isLoading }) => {
 
       {/* Dropdown menu */}
       {isOpen && (
-        <div className="absolute left-0 mt-1 w-full z-10 shadow-lg rounded-md bg-white border border-gray-200 py-1 focus:outline-none">
+        <div className="absolute left-0 mt-1 w-36 z-10 shadow-lg rounded-md bg-white border border-gray-200 py-1 focus:outline-none">
           <ul role="listbox" className="max-h-60 overflow-auto" tabIndex={-1}>
             {models.map((model) => (
               <li
@@ -78,9 +80,9 @@ const ModelSelector = ({ selectedModel, onModelChange, isLoading }) => {
                 className={`cursor-pointer px-3 py-2 text-xs hover:bg-gray-100 flex items-center justify-between
                           ${model.id === selectedModel ? 'bg-gray-50 font-medium' : ''}`}
               >
-                <span>{model.name}</span>
+                <span className="truncate">{model.name}</span>
                 {model.id === selectedModel && (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary" viewBox="0 0 20 20" fill="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
                 )}

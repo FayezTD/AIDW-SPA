@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const Sidebar = ({ onNewChat, activeChatId, className, sidebarCollapsed, setSidebarCollapsed }) => {
+const Sidebar = ({ onNewChat, chatService, activeChatId, className, sidebarCollapsed, setSidebarCollapsed }) => {
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     // Default to open on larger screens, closed on mobile
     return window.innerWidth >= 768;
@@ -30,6 +30,16 @@ const Sidebar = ({ onNewChat, activeChatId, className, sidebarCollapsed, setSide
     }
   };
 
+  // Handler for new chat button that first cancels ongoing requests
+  const handleNewChat = () => {
+    // Cancel all ongoing API requests if chatService is available
+    if (chatService && typeof chatService.cancelAllRequests === 'function') {
+      chatService.cancelAllRequests();
+    }
+    // Then call the original onNewChat function
+    onNewChat();
+  };
+
   return (
     <>
       {/* Sidebar with inward shadow on right edge */}
@@ -48,8 +58,8 @@ const Sidebar = ({ onNewChat, activeChatId, className, sidebarCollapsed, setSide
       >
         <div className={`p-4 flex justify-between items-center ${sidebarCollapsed ? 'justify-center' : ''}`}>
           <button
-            onClick={onNewChat}
-            onKeyDown={(e) => handleKeyDown(e, onNewChat)}
+            onClick={handleNewChat}
+            onKeyDown={(e) => handleKeyDown(e, handleNewChat)}
             className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium transition duration-150 bg-gray-500 hover:bg-gray-700 text-white"
             tabIndex={1}
             aria-label="New Chat"
@@ -102,29 +112,29 @@ const Sidebar = ({ onNewChat, activeChatId, className, sidebarCollapsed, setSide
           
           {/* Rectangular Collapse/Expand button like Claude's sidebar */}
           <button 
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            onKeyDown={(e) => handleKeyDown(e, () => setSidebarCollapsed(!sidebarCollapsed))}
-            className="px-3 py-1 rounded border border-gray-300 bg-white text-gray-600 flex items-center justify-center text-xs font-medium hover:bg-gray-50 transition-colors"
-            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            tabIndex={2}
-          >
-            {sidebarCollapsed ? (
-  <>
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-    </svg>
-    <span className="hidden md:inline"></span>
-  </>
-) : (
-  <>
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-    </svg>
-    <span></span>
-  </>
-)}
-          </button>
+      onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+      onKeyDown={(e) => handleKeyDown(e, () => setSidebarCollapsed(!sidebarCollapsed))}
+      className="px-3 py-1 rounded border-2 border-gray-400 bg-white text-gray-600 flex items-center justify-center text-xs font-medium hover:bg-gray-50 transition-colors"
+      aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+      title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+      tabIndex={2}
+    >
+      {sidebarCollapsed ? (
+        <>
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          <span className="hidden md:inline"></span>
+        </>
+      ) : (
+        <>
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          <span></span>
+        </>
+      )}
+    </button>
         </div>
       </div>
       

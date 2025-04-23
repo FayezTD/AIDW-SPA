@@ -241,9 +241,9 @@
   }
 }
 
-[role="status"] {
+/* [role="status"] {
   animation: pulse 1.5s infinite;
-}
+} */
 
 /* Layout utilities */
 .md\:ml-1\/4 {
