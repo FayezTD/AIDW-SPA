@@ -1,6 +1,6 @@
 /* useChat.js - Enhanced to handle new chat history format */
  
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useAuth } from '../components/auth/AuthProvider';
 import ChatService from '../services/chatService';
 import VisualizationService from '../services/visualizationService';
