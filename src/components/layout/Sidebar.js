@@ -1,14 +1,34 @@
 import React, { useState, useEffect } from 'react';
 
-const Sidebar = ({ onNewChat, chatService, activeChatId, className, sidebarCollapsed, setSidebarCollapsed }) => {
+const Sidebar = ({ onNewChat, chatService, activeChatId, className, sidebarCollapsed, setSidebarCollapsed, firstUserMessage }) => {
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     // Default to open on larger screens, closed on mobile
     return window.innerWidth >= 768;
   });
+  
+  // State to store the chat excerpt
+  const [chatExcerpt, setChatExcerpt] = useState(() => {
+    // Try to load from localStorage on component mount
+    return localStorage.getItem('currentChatExcerpt') || "AI-driven workplace assistant";
+  });
 
+  // Update localStorage when sidebar collapsed state changes
   useEffect(() => {
     localStorage.setItem('sidebarCollapsed', sidebarCollapsed.toString());
   }, [sidebarCollapsed]);
+  
+  // Update the excerpt when first user message changes
+  useEffect(() => {
+    if (firstUserMessage) {
+      // Extract first 25 words
+      const words = firstUserMessage.trim().split(/\s+/);
+      const excerpt = words.slice(0, 25).join(' ') + (words.length > 25 ? '...' : '');
+      
+      // Update state and localStorage
+      setChatExcerpt(excerpt);
+      localStorage.setItem('currentChatExcerpt', excerpt);
+    }
+  }, [firstUserMessage]);
   
   // Listen for window resize to automatically adjust sidebar state
   useEffect(() => {
@@ -36,6 +56,11 @@ const Sidebar = ({ onNewChat, chatService, activeChatId, className, sidebarColla
     if (chatService && typeof chatService.cancelAllRequests === 'function') {
       chatService.cancelAllRequests();
     }
+    
+    // Reset the chat excerpt to default
+    setChatExcerpt("AI-driven workplace assistant");
+    localStorage.setItem('currentChatExcerpt', "AI-driven workplace assistant");
+    
     // Then call the original onNewChat function
     onNewChat();
   };
@@ -97,7 +122,7 @@ const Sidebar = ({ onNewChat, chatService, activeChatId, className, sidebarColla
             ) : (
               <>
                 <div className="text-sm font-medium truncate">Current Chat</div>
-                <div className="text-xs truncate text-[#0f0f0f]">AI-driven workplace assistant</div>
+                <div className="text-xs truncate text-[#0f0f0f]">{chatExcerpt}</div>
               </>
             )}
           </div>
@@ -112,29 +137,29 @@ const Sidebar = ({ onNewChat, chatService, activeChatId, className, sidebarColla
           
           {/* Rectangular Collapse/Expand button like Claude's sidebar */}
           <button 
-      onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-      onKeyDown={(e) => handleKeyDown(e, () => setSidebarCollapsed(!sidebarCollapsed))}
-      className="px-3 py-1 rounded border-2 border-gray-400 bg-white text-gray-600 flex items-center justify-center text-xs font-medium hover:bg-gray-50 transition-colors"
-      aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-      title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-      tabIndex={2}
-    >
-      {sidebarCollapsed ? (
-        <>
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-          <span className="hidden md:inline"></span>
-        </>
-      ) : (
-        <>
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          <span></span>
-        </>
-      )}
-    </button>
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            onKeyDown={(e) => handleKeyDown(e, () => setSidebarCollapsed(!sidebarCollapsed))}
+            className="px-3 py-1 rounded border-2 border-gray-400 bg-white text-gray-600 flex items-center justify-center text-xs font-medium hover:bg-gray-50 transition-colors"
+            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            tabIndex={2}
+          >
+            {sidebarCollapsed ? (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+                <span className="hidden md:inline"></span>
+              </>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                <span></span>
+              </>
+            )}
+          </button>
         </div>
       </div>
       

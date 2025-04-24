@@ -33,6 +33,11 @@ const ChatPage = () => {
     if (savedState !== null) return savedState === 'true';
     return window.innerWidth < 768; // Default to collapsed on mobile
   });
+
+  // State to track the first user message for each chat session
+  const [firstUserMessage, setFirstUserMessage] = useState(() => {
+    return localStorage.getItem('currentChatExcerpt') || '';
+  });
  
   // Smooth scroll to bottom when messages change, with a slight delay to ensure content is rendered
   useEffect(() => {
@@ -95,12 +100,22 @@ const ChatPage = () => {
     setSidebarCollapsed(!sidebarCollapsed);
   };
   
+  // Function to handle the first user message for the sidebar
+  const handleFirstUserMessage = (content) => {
+    if (!firstUserMessage) {
+      setFirstUserMessage(content);
+    }
+  };
+  
   // Handle new chat with request cancellation
   const handleNewChat = () => {
     // Cancel any ongoing requests
     if (chatServiceRef.current && typeof chatServiceRef.current.cancelAllRequests === 'function') {
       chatServiceRef.current.cancelAllRequests();
     }
+    // Reset first user message when starting a new chat
+    setFirstUserMessage('');
+    localStorage.removeItem('currentChatExcerpt');
     // Then clear the chat
     clearChat();
   };
@@ -146,6 +161,7 @@ const ChatPage = () => {
             className="h-full bg-gray-800 shadow-inner overflow-y-auto"
             sidebarCollapsed={sidebarCollapsed}
             setSidebarCollapsed={handleSidebarToggle}
+            firstUserMessage={firstUserMessage} // Pass the first user message to the sidebar
           />
         </div>
         
@@ -246,7 +262,14 @@ const ChatPage = () => {
                 aria-live="polite"
               >
                 {messages.map((message) => (
-                  <ChatMessage key={message.id} message={message} />
+                  <ChatMessage 
+                    key={message.id} 
+                    message={message} 
+                    isLoading={isLoading && message === messages[messages.length - 1] && message.role === 'assistant'}
+                    onFirstUserMessage={handleFirstUserMessage} // Pass the handler to capture first user message
+                    pdfSasUrl={message.pdfSasUrl || ''}
+                    onCitationClick={(citation) => console.log('Citation clicked:', citation)}
+                  />
                 ))}
                 {isLoading && (
                   <div className="flex items-center justify-center w-full p-5">

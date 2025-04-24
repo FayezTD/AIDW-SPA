@@ -5,7 +5,7 @@ import { formatDistanceToNow } from 'date-fns';
 import CitationsList from './CitationsList';
 import TableRenderer from './TableRenderer';
 import GraphRenderer from './GraphRenderer';
-import SecureDocumentViewer from './SecureDocumentViewer'; // Import the new component
+import SecureDocumentViewer from './SecureDocumentViewer';
 
 // PDF Viewer Component
 const PDFViewer = ({ sasUrl }) => {
@@ -16,7 +16,7 @@ const PDFViewer = ({ sasUrl }) => {
   };
   
   return (
-    <div className="relative w-full h-[600px] border border-gray-300 rounded-lg bg-gray-50">
+    <div className="relative w-full h-64 border border-gray-300 rounded-lg bg-gray-50">
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
@@ -157,7 +157,7 @@ const RichContent = ({ content, pdfSasUrl }) => {
   );
 };
 
-const ChatMessage = ({ message, isLoading, onCitationClick, pdfSasUrl }) => {
+const ChatMessage = ({ message, isLoading, onCitationClick, pdfSasUrl, onFirstUserMessage }) => {
   const { role, content, timestamp, citations, hyperlinks } = message;
   const isUser = role === 'user';
   const [toast, setToast] = useState({ visible: false, message: '' });
@@ -176,6 +176,13 @@ const ChatMessage = ({ message, isLoading, onCitationClick, pdfSasUrl }) => {
     content.includes('%%GRAPH_JSON%%') || 
     pdfSasUrl
   );
+
+  // Call onFirstUserMessage when this is a user message (to capture first message for sidebar)
+  useEffect(() => {
+    if (isUser && onFirstUserMessage && content) {
+      onFirstUserMessage(content);
+    }
+  }, [isUser, content, onFirstUserMessage]);
 
   // Get available voices when component mounts
   useEffect(() => {
