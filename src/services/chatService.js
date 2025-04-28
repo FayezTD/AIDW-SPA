@@ -87,25 +87,43 @@ export default class ChatService {
   processResponse(data) {
     console.log('Raw API response:', data);
     
-    if (!data || data.error) {
+    if (!data) {
       return {
-        answer: data?.error || 'An unexpected error occurred.',
+        answer: 'An unexpected error occurred.',
         citations: [],
         hyperlinks: [],
         error: true
       };
     }
+    
+    // Handle nested response structure
+    if (data.error) {
+      return {
+        answer: data.error,
+        citations: [],
+        hyperlinks: [],
+        error: true
+      };
+    }
+    
+    // Handle nested answer object
+    let finalAnswer = '';
+    if (typeof data.answer === 'object' && data.answer !== null) {
+      finalAnswer = data.answer.answer || '';
+    } else {
+      finalAnswer = data.answer || '';
+    }
   
-    // Handle the new response format
-    // The new response appears to be simpler: {"answer": "...", "intent": "..."}
-    // We'll still maintain backwards compatibility with the old format
-    
     // Extract citations and hyperlinks if they exist in the response
-    let citations = data.citation ? 
-      (Array.isArray(data.citation) ? data.citation : [data.citation]) : [];
+    let citations = [];
+    if (data.citation) {
+      citations = Array.isArray(data.citation) ? data.citation : [data.citation];
+    }
     
-    let hyperlinks = data.hyperlink ? 
-      (Array.isArray(data.hyperlink) ? data.hyperlink : [data.hyperlink]) : [];
+    let hyperlinks = [];
+    if (data.hyperlink) {
+      hyperlinks = Array.isArray(data.hyperlink) ? data.hyperlink : [data.hyperlink];
+    }
     
     // Filter out empty citations and hyperlinks
     citations = citations.filter(item => item && item.trim() !== '');
@@ -120,7 +138,7 @@ export default class ChatService {
     
     // Include intent in the return object if it exists
     return {
-      answer: data.answer || '',
+      answer: finalAnswer,
       citations: processedCitations,
       hyperlinks: processedHyperlinks,
       intent: data.intent || null,

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 
 const ReasoningLoader = () => {
   const [message, setMessage] = useState("Thinking...");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const loadingSteps = [
     "Analyzing your query...",
     "Gathering relevant information...",

@@ -1,131 +1,200 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { LogOut } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 
-const Header = () => {
-  const { user, logout, isAuthenticated } = useAuth();
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [userInfo, setUserInfo] = useState({
-    name: '',
-    email: user?.email || '',
-    organization: '',
-    initials: ''
-  });
-  
-  useEffect(() => {
-    if (user?.email) {
-      // Get user display name from email (before the @ symbol)
-      const displayName = user.email.split('@')[0]
-        .split('.')
-        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(' ');
-      
-      // Get organization from email domain
-      const organization = user.email.split('@')[1]?.split('.')[0] || '';
-      
-      // Generate initials from name
-      const initials = getInitials(user.email);
-      
-      setUserInfo({
-        name: displayName,
-        email: user.email,
-        organization: organization.charAt(0).toUpperCase() + organization.slice(1),
-        initials
-      });
-    }
-  }, [user]);
-  
-  // Generate initials from user email
-  const getInitials = (email) => {
-    if (!email) return "?";
-    
-    // Split the email by @ and then by non-word characters
-    const nameParts = email.split('@')[0].split(/[^a-zA-Z0-9]/);
-    
-    // Get first character of each part (up to 2)
-    return nameParts
-      .filter(part => part.length > 0)
-      .map(part => part[0].toUpperCase())
-      .slice(0, 2)
-      .join('');
-  };
+const Navbar = () => {
+    const [showUserMenu, setShowUserMenu] = useState(false);
+    const { user, logout } = useAuth();
+    const userMenuRef = useRef(null);
 
-  const handleSignOut = (e) => {
-    e.preventDefault();
-    logout();
-    setShowProfileMenu(false);
-  };
+    // Comprehensive function to extract initials from any user data format
+    const extractInitials = () => {
+        // If no user data exists
+        if (!user) return 'U';
+        
+        // Check for name in user object
+        if (user.name) {
+            const nameParts = user.name.trim().split(/\s+/);
+            if (nameParts.length === 0 || !nameParts[0]) return 'U';
+            if (nameParts.length === 1) return nameParts[0].charAt(0).toUpperCase();
+            return (nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)).toUpperCase();
+        }
+        
+        // Try firstName and lastName if available
+        if (user.firstName || user.lastName) {
+            const first = user.firstName ? user.firstName.charAt(0).toUpperCase() : '';
+            const last = user.lastName ? user.lastName.charAt(0).toUpperCase() : '';
+            return first + last || 'U';
+        }
+        
+        // Try fullName if available
+        if (user.fullName) {
+            const nameParts = user.fullName.trim().split(/\s+/);
+            if (nameParts.length === 0 || !nameParts[0]) return 'U';
+            if (nameParts.length === 1) return nameParts[0].charAt(0).toUpperCase();
+            return (nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)).toUpperCase();
+        }
+        
+        // Try displayName if available
+        if (user.displayName) {
+            const nameParts = user.displayName.trim().split(/\s+/);
+            if (nameParts.length === 0 || !nameParts[0]) return 'U';
+            if (nameParts.length === 1) return nameParts[0].charAt(0).toUpperCase();
+            return (nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)).toUpperCase();
+        }
+        
+        // Use email as last resort
+        if (user.email) {
+            const emailParts = user.email.split('@');
+            if (emailParts[0]) {
+                // Handle email usernames with dots or underscores
+                const nameParts = emailParts[0].split(/[._-]/);
+                if (nameParts.length === 1) return nameParts[0].charAt(0).toUpperCase();
+                if (nameParts.length > 1) {
+                    return (nameParts[0].charAt(0) + nameParts[1].charAt(0)).toUpperCase();
+                }
+                return emailParts[0].charAt(0).toUpperCase();
+            }
+        }
+        
+        // Absolute fallback
+        return 'U';
+    };
 
-  return (
-    <header className="bg-gradient-to-r from-white to-white w-full shadow-md">
-      <div className="mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex-shrink-0 text-xl sm:text-2xl font-bold text-black">
-            AIDW Assistant
-          </div>
+    // Generate a consistent color based on user email or name
+    const getBackgroundColor = () => {
+        const colorOptions = [
+            'bg-blue-500', 'bg-green-500', 'bg-purple-500', 
+            'bg-red-500', 'bg-yellow-500',
+            'bg-indigo-500', 'bg-teal-500', 'bg-orange-500'
+        ];
+        
+        if (!user) return colorOptions[0];
+        
+        // Create a simple hash from user email or name
+        const str = user.email || user.name || user.displayName || 'user';
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        
+        // Use the hash to select a color
+        const index = Math.abs(hash) % colorOptions.length;
+        return colorOptions[index];
+    };
 
-          <div className="flex-grow"></div>
-          
-          {isAuthenticated && (
-            <div className="relative flex items-center">
-              {/* Profile button */}
-              <button
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="flex items-center focus:outline-none mr-4"
-                aria-label="Open user menu"
-                aria-expanded={showProfileMenu}
-                aria-haspopup="true"
-              >
-                <div 
-                  className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center text-black font-medium hover:bg-cyan-400 transition-colors duration-200"
-                  title={userInfo.email}
-                >
-                  {userInfo.initials}
-                </div>
-              </button>
+    // Get user's display name for the menu
+    const getUserDisplayName = () => {
+        if (!user) return 'Guest';
+        
+        return user.name || 
+               (user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : null) ||
+               user.fullName || 
+               user.displayName ||
+               user.email?.split('@')[0] ||
+               'Guest';
+    };
 
-              {/* Simple Sign Out Icon Button */}
-              <button 
-                onClick={handleSignOut}
-                className="p-2 rounded-full hover:bg-gray-100 focus:outline-none transition-colors duration-200"
-                aria-label="Sign Out"
-                title="Sign Out"
-              >
-                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                </svg>
-              </button>
+    // Get user's organization
+    const getUserOrganization = () => {
+        if (!user) return null;
+        
+        return user.organization || 
+               user.company || 
+               user.dept ||
+               user.team ||
+               null;
+    };
 
-              {/* Profile dropdown menu */}
-              {showProfileMenu && (
-                <div 
-                  className="absolute right-0 top-12 w-64 bg-white rounded-md shadow-lg py-1 z-10 ring-1 ring-black ring-opacity-5"
-                  onMouseLeave={() => setShowProfileMenu(false)}
-                >
-                  {/* User info section */}
-                  <div className="px-4 py-3 border-b border-gray-200">
-                    <div className="flex items-center mb-2">
-                      <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-800 font-medium mr-3">
-                        {userInfo.initials}
-                      </div>
-                      <div className="flex flex-col">
-                        <p className="font-medium text-gray-900">{userInfo.name}</p>
-                        <p className="text-sm text-gray-500 truncate">{userInfo.email}</p>
-                      </div>
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+                setShowUserMenu(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
+    const initials = extractInitials();
+    const bgColor = getBackgroundColor();
+    const displayName = getUserDisplayName();
+    const organization = getUserOrganization();
+
+    return (
+        <header className="bg-white shadow-md">
+            <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+                <h1 className="text-xl md:text-2xl font-bold text-gray-800 pl-5">AIDW Assistant</h1>
+
+                <div className="flex items-center">
+                    {/* User Menu */}
+                    <div className="relative" ref={userMenuRef}>
+                        <button
+                            onClick={() => setShowUserMenu(!showUserMenu)}
+                            title={displayName}
+                            aria-label="User Menu"
+                            className="focus:outline-none"
+                        >
+                            {user?.profilePicture ? (
+                                <img 
+                                    src={user.profilePicture} 
+                                    alt="Profile" 
+                                    className="w-8 h-8 rounded-full object-cover"
+                                />
+                            ) : (
+                                <div className={`w-8 h-8 rounded-full ${bgColor} flex items-center justify-center text-white font-semibold text-sm`}>
+                                    {initials}
+                                </div>
+                            )}
+                        </button>
+
+                        {showUserMenu && (
+                            <div
+                                className="absolute right-0 mt-1 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50"
+                                role="menu"
+                                aria-label="User dropdown"
+                            >
+                                <div className="px-3 py-2 border-b border-gray-100">
+                                    <div className="flex items-center">
+                                        <div className="mr-2">
+                                            {user?.profilePicture ? (
+                                                <img 
+                                                    src={user.profilePicture} 
+                                                    alt="Profile" 
+                                                    className="w-7 h-7 rounded-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className={`w-7 h-7 rounded-full ${bgColor} flex items-center justify-center text-white font-semibold text-xs`}>
+                                                    {initials}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-medium text-gray-900">{displayName}</p>
+                                            <p className="text-xs text-gray-700 truncate">{user?.email || ''}</p>
+                                            {organization && (
+                                                <p className="text-xs text-gray-500">{organization}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={logout}
+                                    role="menuitem"
+                                    className="flex items-center gap-2 w-full text-left px-3 py-1.5 text-xs text-red-600 hover:bg-gray-50 transition"
+                                >
+                                    <LogOut size={16} />
+                                    Sign out
+                                </button>
+                            </div>
+                        )}
                     </div>
-                    {userInfo.organization && (
-                      <div className="text-xs text-gray-500 mt-1 bg-gray-50 py-1 px-2 rounded">
-                        Organization: {userInfo.organization}
-                      </div>
-                    )}
-                  </div>
                 </div>
-              )}
             </div>
-          )}
-        </div>
-      </div>
-    </header>
-  );
+        </header>
+    );
 };
 
-export default Header;
+export default Navbar;

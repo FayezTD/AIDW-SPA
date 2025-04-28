@@ -3,7 +3,7 @@ import Sidebar from '../components/layout/Sidebar';
 import ChatMessage from '../components/chat/ChatMessage';
 import ChatInput from '../components/chat/ChatInput';
 import { useChat, STARTER_QUESTIONS } from '../hooks/useChat';
-import Header from '../components/layout/Header';
+import Navbar from '../components/layout/Navbar';
 import { useAuth } from '../components/auth/AuthProvider';
 import ChatService from '../services/chatService'; // Import ChatService
 import '../styles/chatBackground.css';
@@ -140,7 +140,7 @@ const ChatPage = () => {
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Header fixed at top */}
-      <Header />
+      <Navbar />
       
       <div className="flex flex-1 overflow-hidden chat-background">
         {/* Sidebar - fixed position on desktop, slide-in on mobile */}

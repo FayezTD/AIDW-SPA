@@ -5,32 +5,8 @@ import { formatDistanceToNow } from 'date-fns';
 import CitationsList from './CitationsList';
 import TableRenderer from './TableRenderer';
 import GraphRenderer from './GraphRenderer';
-import SecureDocumentViewer from './SecureDocumentViewer';
+import ResponseFormatter from '../../utils/formatters'
 
-// PDF Viewer Component
-const PDFViewer = ({ sasUrl }) => {
-  const [isLoading, setIsLoading] = useState(true);
-  
-  const handleLoad = () => {
-    setIsLoading(false);
-  };
-  
-  return (
-    <div className="relative w-full h-64 border border-gray-300 rounded-lg bg-gray-50">
-      {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
-        </div>
-      )}
-      <iframe 
-        src={sasUrl} 
-        className="w-full h-full rounded-lg"
-        onLoad={handleLoad}
-        title="PDF Document Viewer"
-      />
-    </div>
-  );
-};
 
 // Toast notification component with improved z-index
 const Toast = ({ message, visible, onClose }) => {
@@ -86,8 +62,6 @@ const FormattedContent = ({ content }) => {
   const cleanedContent = content
     // Replace <br> tags with newlines
     .replace(/<br>/g, '\n')
-    // Remove excessive asterisks (bold formatting)
-    .replace(/\*\*([^*]+)\*\*/g, '$1')
     // Clean up any consecutive newlines to a maximum of two
     .replace(/\n{3,}/g, '\n\n');
 
@@ -110,22 +84,13 @@ const FormattedContent = ({ content }) => {
   );
 };
 
-// Component to handle mixed content with tables, graphs, and PDFs
-const RichContent = ({ content, pdfSasUrl }) => {
-  // Check if this message contains a PDF viewer request
-  const hasPdf = pdfSasUrl && pdfSasUrl.trim() !== '';
-  
+// Component to handle mixed content with tables and graphs
+const RichContent = ({ content }) => {
   // Split content by all special markers
   const parts = content.split(/(%%TABLE_JSON%%.*?%%END_TABLE%%|%%GRAPH_JSON%%.*?%%END_GRAPH%%)/s);
 
   return (
     <>
-      {hasPdf && (
-        <div className="mb-4">
-          <PDFViewer sasUrl={pdfSasUrl} />
-        </div>
-      )}
-      
       {parts.map((part, index) => {
         if (part.startsWith('%%TABLE_JSON%%')) {
           // Extract the JSON string for tables
@@ -157,14 +122,36 @@ const RichContent = ({ content, pdfSasUrl }) => {
   );
 };
 
-const ChatMessage = ({ message, isLoading, onCitationClick, pdfSasUrl, onFirstUserMessage }) => {
-  const { role, content, timestamp, citations, hyperlinks } = message;
+const ChatMessage = ({ message, isLoading, onCitationClick, onFirstUserMessage }) => {
+  let { role, content, timestamp, citations, hyperlinks, intent } = message;
+
+  // Handle the case where content might be nested in an object structure
+  if (typeof content === 'object') {
+    const parsedContent = ResponseFormatter.parseResponseText(content);
+    content = ResponseFormatter.cleanResponseText(parsedContent);
+  } else if (typeof content === 'string') {
+    content = ResponseFormatter.cleanResponseText(content);
+  }
+
   const isUser = role === 'user';
   const [toast, setToast] = useState({ visible: false, message: '' });
   const [isPlaying, setIsPlaying] = useState(false);
   const [voices, setVoices] = useState([]);
-  const [documentToView, setDocumentToView] = useState(null);
   const speechSynthRef = useRef(null);
+
+  // Format citations properly, ensuring they're arrays
+  if (citations && !Array.isArray(citations)) {
+    citations = [citations];
+  }
+  if (hyperlinks && !Array.isArray(hyperlinks)) {
+    hyperlinks = [hyperlinks];
+  }
+
+  const formattedCitations = useMemo(() => {
+    return citations && citations.length > 0 
+      ? ResponseFormatter.formatCitations(citations, hyperlinks)
+      : [];
+  }, [citations, hyperlinks]);
 
   const formattedTime = timestamp
     ? formatDistanceToNow(new Date(timestamp), { addSuffix: true })
@@ -173,8 +160,7 @@ const ChatMessage = ({ message, isLoading, onCitationClick, pdfSasUrl, onFirstUs
   // Check if the content contains special markers
   const hasSpecialContent = content && (
     content.includes('%%TABLE_JSON%%') || 
-    content.includes('%%GRAPH_JSON%%') || 
-    pdfSasUrl
+    content.includes('%%GRAPH_JSON%%')
   );
 
   // Call onFirstUserMessage when this is a user message (to capture first message for sidebar)
@@ -338,7 +324,7 @@ const ChatMessage = ({ message, isLoading, onCitationClick, pdfSasUrl, onFirstUs
     }
   };
 
-  // Handler for citation clicks - updated to handle document viewing
+  // Handler for citation clicks - opens links in a new tab
   const handleCitationClick = (citation) => {
     // If citation is a string, check if it has a corresponding hyperlink
     if (typeof citation === 'string' && hyperlinks && hyperlinks.length > 0) {
@@ -347,21 +333,14 @@ const ChatMessage = ({ message, isLoading, onCitationClick, pdfSasUrl, onFirstUs
       
       // If found and there's a corresponding hyperlink at the same index
       if (index !== -1 && index < hyperlinks.length) {
-        // Set the document to view with the URL
-        setDocumentToView({
-          url: hyperlinks[index],
-          filename: citation
-        });
+        window.open(hyperlinks[index], '_blank');
         return;
       }
     }
     
     // If citation is an object with a URL property
     if (citation && citation.url) {
-      setDocumentToView({
-        url: citation.url,
-        filename: citation.title || 'Document'
-      });
+      window.open(citation.url, '_blank');
       return;
     }
     
@@ -369,11 +348,6 @@ const ChatMessage = ({ message, isLoading, onCitationClick, pdfSasUrl, onFirstUs
     if (onCitationClick) {
       onCitationClick(citation);
     }
-  };
-
-  // Close the document viewer
-  const handleCloseDocumentViewer = () => {
-    setDocumentToView(null);
   };
 
   // Cleanup speech synthesis when component unmounts
@@ -384,6 +358,9 @@ const ChatMessage = ({ message, isLoading, onCitationClick, pdfSasUrl, onFirstUs
       }
     };
   }, [isPlaying]);
+
+  // Check if we have content to display
+  const hasContent = content && content.trim().length > 0;
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4 w-full relative`}>
@@ -402,32 +379,34 @@ const ChatMessage = ({ message, isLoading, onCitationClick, pdfSasUrl, onFirstUs
           </div>
           <div className="ml-2 font-medium">{isUser ? 'You' : 'Assistant'}</div>
           {timestamp && <div className="ml-auto text-xs opacity-75">{formattedTime}</div>}
+          {intent && <div className="ml-2 text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full">{intent}</div>}
         </div>
         <div className="prose max-w-full">
           {isLoading && role === "assistant" ? (
             <ReasoningLoader />
-          ) : (
+          ) : hasContent ? (
             <>
               {hasSpecialContent ? (
-                <RichContent content={content} pdfSasUrl={pdfSasUrl} />
+                <RichContent content={content} />
               ) : (
                 <FormattedContent content={content} />
               )}
             </>
+          ) : (
+            <p className="text-gray-500 italic">No content available</p>
           )}
         </div>
-        {!isUser && citations && citations.length > 0 && (
+        {!isUser && formattedCitations && formattedCitations.length > 0 && (
           <div className="mt-3 w-full citation-list">
             <CitationsList 
-              citations={citations} 
-              hyperlinks={hyperlinks || []}
+              citations={formattedCitations} 
               onCitationClick={handleCitationClick}
             />
           </div>
         )}
         
         {/* Action buttons for assistant messages */}
-        {!isUser && !isLoading && (
+        {!isUser && !isLoading && hasContent && (
           <div className="mt-3 flex items-center gap-2">
             <button 
               onClick={handleCopy}
@@ -471,15 +450,6 @@ const ChatMessage = ({ message, isLoading, onCitationClick, pdfSasUrl, onFirstUs
           </div>
         )}
       </div>
-      
-      {/* Secure Document Viewer */}
-      {documentToView && (
-        <SecureDocumentViewer 
-          url={documentToView.url}
-          filename={documentToView.filename}
-          onClose={handleCloseDocumentViewer}
-        />
-      )}
       
       {/* Toast Notification */}
       <Toast 

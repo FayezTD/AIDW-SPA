@@ -1,5 +1,3 @@
-/* useChat.js - Enhanced to handle new chat history format */
- 
 import { useState, useCallback } from 'react';
 import { useAuth } from '../components/auth/AuthProvider';
 import ChatService from '../services/chatService';
@@ -9,16 +7,16 @@ import ResponseFormatter from '../utils/formatters';
 // STARTER_QUESTIONS constant remains unchanged
 export const STARTER_QUESTIONS = [
   {
-    id: 'azure-threat-detection',
-    question: 'Which Azure services are commonly used in threat detection and response?'
+    id: 'azure-data-lake',
+    question: 'Visualize the hierarchical namespace for azure data lake?'
   },
   {
-    id: 'azure-resiliency-patterns',
-    question: 'What are the limitations of creating reports from tasks in Microsoft Fabric?'
+    id: 'azure-kubernetes-service',
+    question: 'Explain the Use Azure Kubernetes Service to host GPU-based workloads?'
   },
   {
     id: 'azure-form-recognizer',
-    question: 'What are the resiliency patterns mentioned in Azure architectural designs? Please tabulate the response.'
+    question: 'What are the resiliency patterns mentioned in Azure architectural designs? Tabularise the response.'
   }
 ]; 
 
@@ -28,9 +26,49 @@ export function useChat(selectedModel) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
  
-  // Creating chat service instance
+  // Create chat service instance once
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const chatService = new ChatService();
+
+  // Helper function to convert internal message format to the new chat_history format
+  const convertMessagesToHistory = useCallback((messages) => {
+    if (!messages || messages.length === 0) return [];
+    
+    const chatHistory = [];
+    
+    // Process messages in sequence, looking for user-assistant pairs
+    for (let i = 0; i < messages.length - 1; i++) {
+      // Find user message
+      if (messages[i].role !== 'user') continue;
+      
+      // Look for corresponding assistant message
+      if (i+1 < messages.length && messages[i+1].role === 'assistant') {
+        const userMessage = messages[i];
+        const assistantMessage = messages[i+1];
+        
+        const historyEntry = {
+          response: {
+            user: userMessage.content,
+            bot: assistantMessage.content
+          },
+          intent: assistantMessage.intent || 'General',
+          time: formatTime(userMessage.timestamp)
+        };
+        
+        chatHistory.push(historyEntry);
+        i++; // Skip the assistant message we just processed
+      }
+    }
+    
+    return chatHistory;
+  }, []);
+  
+  // Helper function to format timestamp to HH:MM:SS
+  const formatTime = (timestamp) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    return date.toTimeString().split(' ')[0];
+  };
 
   const sendMessage = useCallback(async (content, model) => {
     if (!content.trim() || !isAuthenticated) return;
@@ -48,46 +86,55 @@ export function useChat(selectedModel) {
       timestamp: new Date()
     };
  
-    setMessages(prev => [...prev, userMessage]);
+    // Add user message to state first
+    setMessages(prevMessages => [...prevMessages, userMessage]);
     setIsLoading(true);
     setError(null);
  
     try {
-      // Convert messages to the new chat_history format
-      const chatHistory = convertMessagesToHistory(messages);
+      // Convert current messages to chat history format
+      const currentMessages = [...messages, userMessage];
+      const chatHistory = convertMessagesToHistory(currentMessages);
       
+      // Send message to service
       const response = await chatService.sendMessage(finalContent, model || selectedModel, chatHistory);
 
       if (response.error) {
-        setError(response.answer);
+        console.error("API error:", response.answer || response.error);
+        setError(response.answer || "Error processing request");
       } else {
+        // Process response
         let processedAnswer = response.answer || "I'm sorry, I couldn't generate a complete response at this time.";
+        
+        // Apply formatters
         processedAnswer = ResponseFormatter.formatTables(processedAnswer);
         processedAnswer = VisualizationService.processAllVisualizations(processedAnswer);
  
-        const formattedCitations = ResponseFormatter.formatCitations(
-          response.citations || [],
-          response.hyperlinks || []
-        );
+        // Ensure we have arrays for citations and hyperlinks, even if empty
+        const citations = response.citations || [];
+        const hyperlinks = response.hyperlinks || [];
  
+        // Create assistant message
         const assistantMessage = {
           id: Date.now().toString() + '-response',
           role: 'assistant',
           content: processedAnswer,
-          citations: formattedCitations,
-          intent: response.intent || 'General', // Store intent from response
+          citations: citations,
+          hyperlinks: hyperlinks,
+          intent: response.intent || 'General',
           timestamp: new Date()
         };
  
-        setMessages(prev => [...prev, assistantMessage]);
+        // Update messages with assistant response
+        setMessages(prevMessages => [...prevMessages, assistantMessage]);
       }
     } catch (err) {
+      console.error("Send message error:", err);
       setError('Failed to send message. Please try again.');
     } finally {
       setIsLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages, chatService, isAuthenticated, user, selectedModel]);
+  }, [messages, chatService, isAuthenticated, user, selectedModel, convertMessagesToHistory]);
  
   const handleStarterQuestion = useCallback((question) => {
     sendMessage(question);
@@ -98,43 +145,6 @@ export function useChat(selectedModel) {
     setError(null);
   }, []);
   
-  // Helper function to convert internal message format to the new chat_history format
-  const convertMessagesToHistory = (messages) => {
-    if (!messages || messages.length === 0) return [];
-    
-    const chatHistory = [];
-    
-    // Process messages in pairs (user->assistant)
-    for (let i = 0; i < messages.length; i += 2) {
-      const userMessage = messages[i];
-      const assistantMessage = messages[i + 1];
-      
-      // Skip if we don't have a complete pair
-      if (!userMessage || userMessage.role !== 'user') continue;
-      if (!assistantMessage || assistantMessage.role !== 'assistant') continue;
-      
-      const historyEntry = {
-        response: {
-          user: userMessage.content,
-          bot: assistantMessage.content
-        },
-        intent: assistantMessage.intent || 'General',
-        time: formatTime(userMessage.timestamp)
-      };
-      
-      chatHistory.push(historyEntry);
-    }
-    
-    return chatHistory;
-  };
-  
-  // Helper function to format timestamp to HH:MM:SS
-  const formatTime = (timestamp) => {
-    if (!timestamp) return '';
-    const date = new Date(timestamp);
-    return date.toTimeString().split(' ')[0];
-  };
- 
   return {
     messages,
     isLoading: isLoading || authLoading,
