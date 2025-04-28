@@ -131,7 +131,7 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
             console.log('No speech detected');
             break;
           case 'audio-capture':
-            console.error('Audio capture failed - check microphone');
+            console.error('Audio capture failed - please check microphone');
             break;
           case 'not-allowed':
             console.error('Microphone permission denied');
