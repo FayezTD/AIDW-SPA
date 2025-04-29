@@ -1,87 +1,108 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
-  LineChart, BarChart, PieChart, AreaChart, ScatterChart,
-  Line, Bar, Pie, Area, Scatter, XAxis, YAxis, CartesianGrid, 
-  Tooltip, Legend, ResponsiveContainer, Cell,
-  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  ComposedChart, Treemap, Sector
+  LineChart, BarChart, Line, Bar, XAxis, YAxis, CartesianGrid, 
+  Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 
-const GraphRenderer = ({ data, height = 400, width = '100%', className = '' }) => {
+const GraphRenderer = ({ mapData, height = 400, width = '100%', className = '' }) => {
   const [chartType, setChartType] = useState('bar');
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [error, setError] = useState(null);
+  const chartRef = useRef(null);
   
+  // Debug the incoming data
   useEffect(() => {
-    // Set initial chart type from data if provided
-    if (data && data.chartType) {
-      setChartType(data.chartType);
+    console.log('GraphRenderer received mapData:', mapData);
+  }, [mapData]);
+  
+  // Process data for recharts from map_data format
+  const processedData = React.useMemo(() => {
+    // Bail early if no data
+    if (!mapData) {
+      console.warn('No mapData provided to GraphRenderer');
+      return null;
     }
-  }, [data]);
-
-  // Error handling for invalid data
-  if (!data) {
-    return <div className="text-red-500 p-4 bg-red-50 rounded-md">No chart data provided</div>;
-  }
-  
-  if (!data.datasets || !Array.isArray(data.datasets) || !data.datasets.length) {
-    return <div className="text-red-500 p-4 bg-red-50 rounded-md">Invalid chart data structure</div>;
-  }
-
-  const { datasets, labels, title, xAxisLabel, yAxisLabel, options } = data;
-  
-  // Format data for Recharts
-  const formattedData = labels ? 
-    labels.map((label, index) => {
-      const dataPoint = { name: label };
-      datasets.forEach(dataset => {
-        if (dataset.data && dataset.data[index] !== undefined) {
-          dataPoint[dataset.label || `Series ${index + 1}`] = dataset.data[index];
+    
+    try {
+      // Transform the data into the format expected by recharts
+      const formattedData = [];
+      
+      // Debug what's coming in
+      console.log('Processing map data:', JSON.stringify(mapData));
+      
+      // Process X and Y axis data
+      if (
+        mapData.xAxis && 
+        mapData.yAxis && 
+        Array.isArray(mapData.xAxis.data) && 
+        Array.isArray(mapData.yAxis.data)
+      ) {
+        // Format data for recharts with x and y values
+        const length = Math.min(mapData.xAxis.data.length, mapData.yAxis.data.length);
+        for (let i = 0; i < length; i++) {
+          const dataPoint = {
+            name: mapData.xAxis.data[i],
+            value: mapData.yAxis.data[i] || 0
+          };
+          formattedData.push(dataPoint);
         }
-      });
-      return dataPoint;
-    }) : 
-    chartType === 'scatter' ? 
-      datasets.flatMap((dataset, i) => 
-        dataset.data.map(point => ({ 
-          ...point, 
-          series: dataset.label || `Series ${i + 1}` 
-        }))
-      ) : 
-      datasets;
+      } else if (mapData.datasets && mapData.labels) {
+        // Handle direct chart data format
+        const { datasets, labels } = mapData;
+        if (Array.isArray(labels) && Array.isArray(datasets) && datasets.length > 0) {
+          labels.forEach((label, index) => {
+            const dataPoint = {
+              name: label,
+              value: datasets[0].data[index] || 0
+            };
+            formattedData.push(dataPoint);
+          });
+        }
+      }
+      
+      // Log the formatted data
+      console.log('Formatted data for chart:', formattedData);
+      
+      // If there are no properly formatted data points, return null
+      if (formattedData.length === 0) {
+        console.warn('No data points could be extracted from the provided data');
+        return null;
+      }
+      
+      // Set default chart type from mapData
+      if (
+        mapData.chartTypes && 
+        Array.isArray(mapData.chartTypes) && 
+        mapData.chartTypes.length > 0
+      ) {
+        const preferredType = mapData.chartTypes[0].toLowerCase();
+        if (['bar', 'line'].includes(preferredType)) {
+          setChartType(preferredType);
+        }
+      } else if (mapData.chartType) {
+        // Also check for direct chartType specification
+        if (['bar', 'line'].includes(mapData.chartType.toLowerCase())) {
+          setChartType(mapData.chartType.toLowerCase());
+        }
+      }
+      
+      return {
+        formattedData,
+        xAxisLabel: mapData.xAxis?.label || mapData.xLabel || '',
+        yAxisLabel: mapData.yAxis?.label || mapData.yLabel || ''
+      };
+    } catch (err) {
+      console.error('Error processing chart data:', err);
+      setError('Failed to process chart data: ' + err.message);
+      return null;
+    }
+  }, [mapData]);
 
-  // Generate colors for datasets
-  const defaultColors = [
-    '#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', 
-    '#00C49F', '#FFBB28', '#FF8042', '#6b486b', '#a05d56',
-    '#d0743c', '#ff8c00', '#8a89a6', '#7b6888', '#6b486b'
-  ];
-  
-  // Animated button style classes
+  // Responsive button styles
   const buttonBaseClass = "px-3 py-2 mx-1 my-2 rounded-md text-sm font-medium transition-all duration-200";
   const buttonActiveClass = "bg-blue-600 text-white shadow-md";
   const buttonInactiveClass = "bg-gray-200 text-gray-700 hover:bg-gray-300";
   
-  // Chart type selector buttons
-  const renderChartSelector = () => (
-    <div className="chart-controls flex flex-wrap justify-center mb-4">
-      {['bar', 'line', 'pie', 'area', 'scatter', 'radar', 'composed', 'treemap'].map(type => (
-        <button 
-          key={type}
-          className={`${buttonBaseClass} ${chartType === type ? buttonActiveClass : buttonInactiveClass}`}
-          onClick={() => setChartType(type)}
-        >
-          {type.charAt(0).toUpperCase() + type.slice(1)}
-        </button>
-      ))}
-    </div>
-  );
-
-  // Handle pie chart interaction
-  const handlePieEnter = (_, index) => {
-    setActiveIndex(index);
-  };
-
-  // Custom tooltip for better display
+  // Custom tooltip component
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload || !payload.length) return null;
     
@@ -89,365 +110,149 @@ const GraphRenderer = ({ data, height = 400, width = '100%', className = '' }) =
       <div className="custom-tooltip bg-white p-2 border border-gray-300 rounded shadow-md">
         <p className="label font-medium">{`${label || ''}`}</p>
         {payload.map((entry, index) => (
-          <p key={`item-${index}`} style={{ color: entry.color }}>
-            {`${entry.name}: ${entry.value}`}
+          <p key={`item-${index}`} style={{ color: entry.color || entry.fill }}>
+            {`${entry.name || entry.dataKey}: ${entry.value}`}
           </p>
         ))}
       </div>
     );
   };
-  
-  // Active shape for pie chart
-  const renderActiveShape = (props) => {
-    const { cx, cy, innerRadius, outerRadius, startAngle, endAngle,
-      fill, payload, percent, value } = props;
+
+  // Empty state component
+  const renderEmptyState = () => (
+    <div className="flex flex-col items-center justify-center h-64 bg-gray-50 rounded-md border border-gray-200">
+      <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+      </svg>
+      <p className="mt-2 text-gray-500">No data available for visualization</p>
+      <div className="mt-4 text-sm text-gray-400">
+        Received data structure: {mapData ? JSON.stringify(Object.keys(mapData)) : 'none'}
+      </div>
+    </div>
+  );
+
+  // Display available chart types based on data
+  const renderChartSelector = () => {
+    // Only show bar and line chart options
+    const availableChartTypes = ['bar', 'line'];
     
     return (
-      <g>
-        <text x={cx} y={cy - 15} dy={8} textAnchor="middle" fill="#333" fontSize={16}>
-          {payload.name}
-        </text>
-        <text x={cx} y={cy + 15} dy={8} textAnchor="middle" fill="#999" fontSize={14}>
-          {`${value} (${(percent * 100).toFixed(1)}%)`}
-        </text>
-        <Sector
-          cx={cx}
-          cy={cy}
-          innerRadius={innerRadius}
-          outerRadius={outerRadius + 10}
-          startAngle={startAngle}
-          endAngle={endAngle}
-          fill={fill}
-        />
-      </g>
+      <div className="chart-controls flex flex-wrap justify-center mb-4">
+        {availableChartTypes.map(type => (
+          <button 
+            key={type}
+            className={`${buttonBaseClass} ${chartType === type ? buttonActiveClass : buttonInactiveClass}`}
+            onClick={() => setChartType(type)}
+          >
+            {type.charAt(0).toUpperCase() + type.slice(1)}
+          </button>
+        ))}
+      </div>
     );
   };
 
-  // Render different chart types
+  // Generate colors for chart
+  const defaultColors = [
+    '#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', 
+    '#00C49F', '#FFBB28', '#FF8042'
+  ];
+
+  // Render function for different chart types
   const renderChart = () => {
-    switch (chartType) {
-      case 'line':
-        return (
-          <ResponsiveContainer width={width} height={height}>
-            <LineChart data={formattedData} margin={{ top: 20, right: 30, left: 20, bottom: 50 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis 
-                dataKey="name" 
-                label={{ value: xAxisLabel || '', position: 'bottom', offset: 10 }}
-                tick={{ fill: '#666', fontSize: 12 }}
-              />
-              <YAxis 
-                label={{ value: yAxisLabel || '', angle: -90, position: 'insideLeft' }}
-                tick={{ fill: '#666', fontSize: 12 }}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend verticalAlign="top" height={36} />
-              {datasets.map((dataset, index) => (
+    if (!processedData || !processedData.formattedData || processedData.formattedData.length === 0) {
+      return renderEmptyState();
+    }
+
+    try {
+      const { formattedData, xAxisLabel, yAxisLabel } = processedData;
+      
+      switch (chartType) {
+        case 'line':
+          return (
+            <ResponsiveContainer width={width} height={height} ref={chartRef}>
+              <LineChart data={formattedData} margin={{ top: 20, right: 30, left: 20, bottom: 50 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="name" 
+                  label={{ value: xAxisLabel || '', position: 'insideBottom', offset: -5 }}
+                  tick={{ fill: '#666', fontSize: 12 }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={70}
+                />
+                <YAxis 
+                  label={{ value: yAxisLabel || '', angle: -90, position: 'insideLeft' }}
+                  tick={{ fill: '#666', fontSize: 12 }}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend verticalAlign="top" height={36} />
                 <Line 
-                  key={index}
                   type="monotone"
-                  dataKey={dataset.label || `Series ${index + 1}`}
-                  stroke={dataset.borderColor || defaultColors[index % defaultColors.length]}
+                  dataKey="value"
+                  stroke={defaultColors[0]}
                   strokeWidth={2}
                   dot={{ r: 4, strokeWidth: 2 }}
                   activeDot={{ r: 6, strokeWidth: 0 }}
+                  name={yAxisLabel || 'Value'}
                 />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        );
-      
-      case 'bar':
-        return (
-          <ResponsiveContainer width={width} height={height}>
-            <BarChart data={formattedData} margin={{ top: 20, right: 30, left: 20, bottom: 50 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis 
-                dataKey="name" 
-                label={{ value: xAxisLabel || '', position: 'bottom', offset: 10 }}
-                tick={{ fill: '#666', fontSize: 12 }}
-              />
-              <YAxis 
-                label={{ value: yAxisLabel || '', angle: -90, position: 'insideLeft' }}
-                tick={{ fill: '#666', fontSize: 12 }}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend verticalAlign="top" height={36} />
-              {datasets.map((dataset, index) => (
+              </LineChart>
+            </ResponsiveContainer>
+          );
+        
+        case 'bar':
+        default:
+          return (
+            <ResponsiveContainer width={width} height={height} ref={chartRef}>
+              <BarChart data={formattedData} margin={{ top: 20, right: 30, left: 20, bottom: 50 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="name" 
+                  label={{ value: xAxisLabel || '', position: 'insideBottom', offset: -5 }}
+                  tick={{ fill: '#666', fontSize: 12 }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={70}
+                />
+                <YAxis 
+                  label={{ value: yAxisLabel || '', angle: -90, position: 'insideLeft' }}
+                  tick={{ fill: '#666', fontSize: 12 }}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend verticalAlign="top" height={36} />
                 <Bar 
-                  key={index}
-                  dataKey={dataset.label || `Series ${index + 1}`}
-                  fill={dataset.backgroundColor || defaultColors[index % defaultColors.length]}
+                  dataKey="value"
+                  fill={defaultColors[0]}
                   radius={[4, 4, 0, 0]}
-                  barSize={options?.barSize || 20}
+                  barSize={20}
+                  name={yAxisLabel || 'Value'}
                 />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
-        );
-      
-      case 'pie':
-        // For pie charts, data structure is different
-        const pieData = labels ? 
-          labels.map((label, index) => ({
-            name: label,
-            value: datasets[0].data[index],
-            color: datasets[0].backgroundColor?.[index] || defaultColors[index % defaultColors.length]
-          })) : formattedData;
-        
-        return (
-          <ResponsiveContainer width={width} height={height}>
-            <PieChart>
-              <Pie
-                activeIndex={activeIndex}
-                activeShape={renderActiveShape}
-                data={pieData}
-                cx="50%"
-                cy="50%"
-                labelLine={true}
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                outerRadius={height / 3}
-                innerRadius={options?.innerRadius || 0}
-                dataKey="value"
-                onMouseEnter={handlePieEnter}
-              >
-                {pieData.map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
-                    fill={entry.color || defaultColors[index % defaultColors.length]} 
-                  />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-              <Legend layout="vertical" verticalAlign="middle" align="right" />
-            </PieChart>
-          </ResponsiveContainer>
-        );
-      
-      case 'area':
-        return (
-          <ResponsiveContainer width={width} height={height}>
-            <AreaChart data={formattedData} margin={{ top: 20, right: 30, left: 20, bottom: 50 }}>
-              <defs>
-                {datasets.map((dataset, index) => {
-                  const color = dataset.backgroundColor || defaultColors[index % defaultColors.length];
-                  return (
-                    <linearGradient key={index} id={`color${index}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={color} stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor={color} stopOpacity={0.1}/>
-                    </linearGradient>
-                  );
-                })}
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis 
-                dataKey="name" 
-                label={{ value: xAxisLabel || '', position: 'bottom', offset: 10 }}
-                tick={{ fill: '#666', fontSize: 12 }}
-              />
-              <YAxis 
-                label={{ value: yAxisLabel || '', angle: -90, position: 'insideLeft' }}
-                tick={{ fill: '#666', fontSize: 12 }}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend verticalAlign="top" height={36} />
-              {datasets.map((dataset, index) => (
-                <Area 
-                  key={index}
-                  type="monotone"
-                  dataKey={dataset.label || `Series ${index + 1}`}
-                  fill={`url(#color${index})`}
-                  stroke={dataset.borderColor || defaultColors[index % defaultColors.length]}
-                  fillOpacity={0.6}
-                />
-              ))}
-            </AreaChart>
-          </ResponsiveContainer>
-        );
-      
-      case 'scatter':
-        // Format data for scatter plot
-        const scatterData = datasets.map((dataset, datasetIndex) => {
-          const color = dataset.backgroundColor || defaultColors[datasetIndex % defaultColors.length];
-          return {
-            name: dataset.label || `Series ${datasetIndex + 1}`,
-            color,
-            data: Array.isArray(dataset.data) ? dataset.data.map(item => ({
-              x: item.x !== undefined ? item.x : item[0],
-              y: item.y !== undefined ? item.y : item[1],
-            })) : []
-          };
-        });
-        
-        return (
-          <ResponsiveContainer width={width} height={height}>
-            <ScatterChart margin={{ top: 20, right: 30, left: 20, bottom: 50 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis 
-                type="number" 
-                dataKey="x" 
-                name={xAxisLabel || 'X'} 
-                label={{ value: xAxisLabel || 'X', position: 'bottom', offset: 10 }}
-                tick={{ fill: '#666', fontSize: 12 }}
-              />
-              <YAxis 
-                type="number" 
-                dataKey="y" 
-                name={yAxisLabel || 'Y'} 
-                label={{ value: yAxisLabel || 'Y', angle: -90, position: 'insideLeft' }}
-                tick={{ fill: '#666', fontSize: 12 }}
-              />
-              <Tooltip cursor={{ strokeDasharray: '3 3' }} content={<CustomTooltip />} />
-              <Legend verticalAlign="top" height={36} />
-              {scatterData.map((dataset, index) => (
-                <Scatter 
-                  key={index}
-                  name={dataset.name}
-                  data={dataset.data}
-                  fill={dataset.color}
-                  shape={options?.shape || "circle"}
-                >
-                  {dataset.data.map((entry, pointIndex) => (
-                    <Cell key={`cell-${pointIndex}`} fill={dataset.color} />
-                  ))}
-                </Scatter>
-              ))}
-            </ScatterChart>
-          </ResponsiveContainer>
-        );
-      
-      case 'radar':
-        return (
-          <ResponsiveContainer width={width} height={height}>
-            <RadarChart outerRadius={height / 3} data={formattedData}>
-              <PolarGrid />
-              <PolarAngleAxis dataKey="name" />
-              <PolarRadiusAxis angle={30} domain={options?.domain || [0, 'auto']} />
-              {datasets.map((dataset, index) => (
-                <Radar
-                  key={index}
-                  name={dataset.label || `Series ${index + 1}`}
-                  dataKey={dataset.label || `Series ${index + 1}`}
-                  stroke={dataset.borderColor || defaultColors[index % defaultColors.length]}
-                  fill={dataset.backgroundColor || defaultColors[index % defaultColors.length]}
-                  fillOpacity={0.5}
-                />
-              ))}
-              <Legend verticalAlign="bottom" height={36} />
-              <Tooltip content={<CustomTooltip />} />
-            </RadarChart>
-          </ResponsiveContainer>
-        );
-        
-      case 'composed':
-        return (
-          <ResponsiveContainer width={width} height={height}>
-            <ComposedChart data={formattedData} margin={{ top: 20, right: 30, left: 20, bottom: 50 }}>
-              <CartesianGrid stroke="#f5f5f5" />
-              <XAxis 
-                dataKey="name" 
-                label={{ value: xAxisLabel || '', position: 'bottom', offset: 10 }}
-                tick={{ fill: '#666', fontSize: 12 }}
-              />
-              <YAxis 
-                label={{ value: yAxisLabel || '', angle: -90, position: 'insideLeft' }}
-                tick={{ fill: '#666', fontSize: 12 }}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend verticalAlign="top" height={36} />
-              {datasets.map((dataset, index) => {
-                const type = dataset.type || (index === 0 ? 'bar' : 'line');
-                const color = dataset.backgroundColor || defaultColors[index % defaultColors.length];
-                const borderColor = dataset.borderColor || color;
-                
-                switch (type) {
-                  case 'bar':
-                    return (
-                      <Bar 
-                        key={index}
-                        dataKey={dataset.label || `Series ${index + 1}`}
-                        fill={color}
-                        radius={[4, 4, 0, 0]}
-                        barSize={options?.barSize || 20}
-                      />
-                    );
-                  case 'line':
-                    return (
-                      <Line 
-                        key={index}
-                        type="monotone"
-                        dataKey={dataset.label || `Series ${index + 1}`}
-                        stroke={borderColor}
-                        strokeWidth={2}
-                        activeDot={{ r: 6 }}
-                      />
-                    );
-                  case 'area':
-                    return (
-                      <Area 
-                        key={index}
-                        type="monotone"
-                        dataKey={dataset.label || `Series ${index + 1}`}
-                        fill={color}
-                        stroke={borderColor}
-                        fillOpacity={0.3}
-                      />
-                    );
-                  default:
-                    return null;
-                }
-              })}
-            </ComposedChart>
-          </ResponsiveContainer>
-        );
-        
-      case 'treemap':
-        // Format data for treemap
-        const treeMapData = {
-          name: 'Root',
-          children: labels ? 
-            labels.map((label, index) => ({
-              name: label,
-              size: datasets[0].data[index],
-              color: datasets[0].backgroundColor?.[index] || defaultColors[index % defaultColors.length]
-            })) : 
-            datasets[0].data.map((value, index) => ({
-              name: `Item ${index + 1}`,
-              size: value,
-              color: datasets[0].backgroundColor?.[index] || defaultColors[index % defaultColors.length]
-            }))
-        };
-        
-        return (
-          <ResponsiveContainer width={width} height={height}>
-            <Treemap
-              data={treeMapData}
-              dataKey="size"
-              aspectRatio={4/3}
-              stroke="#fff"
-              fill="#8884d8"
-            >
-              {treeMapData.children.map((item, index) => (
-                <Cell 
-                  key={`cell-${index}`} 
-                  fill={item.color || defaultColors[index % defaultColors.length]} 
-                />
-              ))}
-              <Tooltip content={<CustomTooltip />} />
-            </Treemap>
-          </ResponsiveContainer>
-        );
-      
-      default:
-        return <div className="text-red-500">Unsupported chart type: {chartType}</div>;
+              </BarChart>
+            </ResponsiveContainer>
+          );
+      }
+    } catch (err) {
+      console.error(`Error rendering ${chartType} chart:`, err);
+      return (
+        <div className="text-red-500 p-4 bg-red-50 rounded-md border border-red-200">
+          Failed to render chart: {err.message}
+        </div>
+      );
     }
   };
 
   return (
     <div className={`graph-renderer bg-white rounded-lg shadow-md p-4 ${className}`}>
-      {title && <h3 className="text-xl font-semibold text-center mb-4">{title}</h3>}
-      {renderChartSelector()}
-      <div className="chart-container">{renderChart()}</div>
+      <div className="chart-controls-container">
+        {renderChartSelector()}
+      </div>
+      
+      {error ? (
+        <div className="text-red-500 p-4 bg-red-50 rounded-md border border-red-200">
+          {error}
+        </div>
+      ) : (
+        <div className="chart-container">{renderChart()}</div>
+      )}
     </div>
   );
 };

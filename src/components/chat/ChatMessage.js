@@ -1,3 +1,5 @@
+/* eslint-disable no-unused-vars */
+/* eslint-disable no-undef */
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -5,8 +7,8 @@ import { formatDistanceToNow } from 'date-fns';
 import CitationsList from './CitationsList';
 import TableRenderer from './TableRenderer';
 import GraphRenderer from './GraphRenderer';
-import ResponseFormatter from '../../utils/formatters'
-
+import ResponseFormatter from '../../utils/formatters';
+import MarkdownRenderer from './MarkdownRenderer';
 
 // Toast notification component with improved z-index
 const Toast = ({ message, visible, onClose }) => {
@@ -84,46 +86,174 @@ const FormattedContent = ({ content }) => {
   );
 };
 
+// Function to extract graph JSON data from content
+const extractGraphData = (content, marker) => {
+  const startMarker = marker;
+  const endMarker = marker === '%%TABLE_JSON%%' ? '%%END_TABLE%%' : '%%END_GRAPH%%';
+  
+  const startIndex = content.indexOf(startMarker);
+  if (startIndex === -1) return null;
+  
+  const endIndex = content.indexOf(endMarker, startIndex);
+  if (endIndex === -1) return null;
+  
+  const jsonString = content.substring(startIndex + startMarker.length, endIndex).trim();
+  
+  try {
+    return JSON.parse(jsonString);
+  } catch (e) {
+    console.error('Failed to parse JSON data:', e);
+    return null;
+  }
+};
+
 // Component to handle mixed content with tables and graphs
-const RichContent = ({ content }) => {
-  // Split content by all special markers
-  const parts = content.split(/(%%TABLE_JSON%%.*?%%END_TABLE%%|%%GRAPH_JSON%%.*?%%END_GRAPH%%)/s);
+const RichContent = ({ content, mapData }) => {
+  // State to track if visualization is shown
+  
+  // Extract graph data if available
+  const graphData = useMemo(() => extractGraphData(content, '%%GRAPH_JSON%%'), [content]);
+  const tableData = useMemo(() => extractGraphData(content, '%%TABLE_JSON%%'), [content]);
+  
+  // Check if we have visualization data (from either extracted content or mapData)
+  const hasVisualization = graphData || tableData || mapData;
+  
+  // Log mapData when present for debugging
+  useEffect(() => {
+    if (mapData) {
+      console.log("MapData available in ChatMessage:", mapData);
+    }
+  }, [mapData]);
+  
+  // Clean content by removing JSON blocks
+  const cleanedContent = useMemo(() => {
+    if (!content) return '';
+    return content
+      .replace(/%%GRAPH_JSON%%[\s\S]*?%%END_GRAPH%%/g, '')
+      .replace(/%%TABLE_JSON%%[\s\S]*?%%END_TABLE%%/g, '')
+      .trim();
+  }, [content]);
 
   return (
-    <>
-      {parts.map((part, index) => {
-        if (part.startsWith('%%TABLE_JSON%%')) {
-          // Extract the JSON string for tables
-          const jsonString = part.replace('%%TABLE_JSON%%', '').replace('%%END_TABLE%%', '');
-          try {
-            const tableData = JSON.parse(jsonString);
-            return <TableRenderer key={index} data={tableData} />;
-          } catch (e) {
-            console.error('Failed to parse table JSON:', e);
-            return <div key={index} className="text-red-500">Error rendering table</div>;
-          }
-        } else if (part.startsWith('%%GRAPH_JSON%%')) {
-          // Extract the JSON string for graphs
-          const jsonString = part.replace('%%GRAPH_JSON%%', '').replace('%%END_GRAPH%%', '');
-          try {
-            const graphData = JSON.parse(jsonString);
-            return <GraphRenderer key={index} data={graphData} />;
-          } catch (e) {
-            console.error('Failed to parse graph JSON:', e);
-            return <div key={index} className="text-red-500">Error rendering graph</div>;
-          }
-        } else if (part.trim()) {
-          // Render regular markdown content with cleanup
-          return <FormattedContent key={index} content={part} />;
-        }
-        return null;
-      })}
-    </>
+    <div className="rich-content">
+      {/* Regular content without JSON blocks */}
+      {cleanedContent && <FormattedContent content={cleanedContent} />}
+      
+      {/* Visualization toggle button */}
+      {hasVisualization && (
+        <div className="visualization-controls mt-4">
+          <button
+            onClick={() => setShowVisualization(!showVisualization)}
+            className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            {showVisualization ? 'Hide Visualization' : 'Show Visualization'}
+          </button>
+          
+          {/* Visualization container */}
+          {showVisualization && (
+            <div className="visualization-container mt-4">
+              {/* Priority to mapData if available */}
+              {mapData && (
+                <div className="graph-container mb-4">
+                  <h3 className="text-lg font-medium mb-2">Data Visualization</h3>
+                  <GraphRenderer mapData={mapData} height={400} />
+                </div>
+              )}
+              
+              {/* Fallback to extracted graph data if no mapData */}
+              {!mapData && graphData && (
+                <div className="graph-container mb-4">
+                  <h3 className="text-lg font-medium mb-2">Chart Data</h3>
+                  <GraphRenderer mapData={graphData} height={400} />
+                </div>
+              )}
+              
+              {tableData && (
+                <div className="table-container mb-4">
+                  <h3 className="text-lg font-medium mb-2">Table Data</h3>
+                  <TableRenderer data={tableData} />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 };
 
+// Function to detect if content has quantitative data that should be visualized
+const hasQuantitativeContent = (content) => {
+  if (!content) return false;
+  
+  // Check for special markers
+  if (content.includes('%%GRAPH_JSON%%') || content.includes('%%TABLE_JSON%%')) {
+    return true;
+  }
+  
+  // Check for numeric patterns that might indicate quantitative data
+  const numericPatterns = [
+    /\d+%/g, // Percentages
+    /\$\d+(\.\d+)?/g, // Dollar amounts
+    /\d+\s*vs\s*\d+/gi, // Comparison patterns
+    /\b(metrics|statistics|data|numbers|figures|counts|totals|sums)\b/gi, // Keywords
+    /\b(graph|chart|plot|visualization|figure)\b/gi, // Visualization keywords
+  ];
+  
+  return numericPatterns.some(pattern => pattern.test(content));
+};
+
+// Function to generate sample visualization data based on content
+const generateVisualizationData = (content) => {
+  // This is a simplified approach - in production you would parse and analyze content
+  // to create meaningful visualizations based on actual data
+  
+  // For demo purposes, extract numbers from the content
+  const numbers = content.match(/\d+(\.\d+)?/g) || [];
+  const uniqueNumbers = [...new Set(numbers.map(Number))].slice(0, 5);
+  
+  // Create labels from words after numbers
+  const labels = [];
+  const wordRegex = /\d+(\.\d+)?\s+([a-zA-Z]+)/g;
+  let match;
+  
+  while ((match = wordRegex.exec(content)) !== null && labels.length < uniqueNumbers.length) {
+    labels.push(match[2]);
+  }
+  
+  // Fill in missing labels
+  while (labels.length < uniqueNumbers.length) {
+    labels.push(`Item ${labels.length + 1}`);
+  }
+  
+  return {
+    chartType: "bar",
+    title: "Generated Visualization",
+    labels: labels,
+    datasets: [
+      {
+        label: "Values",
+        data: uniqueNumbers,
+        backgroundColor: "#8884d8"
+      }
+    ]
+  };
+};
+
 const ChatMessage = ({ message, isLoading, onCitationClick, onFirstUserMessage }) => {
-  let { role, content, timestamp, citations, hyperlinks, intent } = message;
+  let { role, content, timestamp, citations, hyperlinks, intent, mapData } = message;
+
+  // Debug log message structure when it's an assistant message with potential visualization data
+  useEffect(() => {
+    if (role === 'assistant' && (intent === 'Quantitative' || mapData)) {
+      console.log('Assistant message with potential visualization:', {
+        intent,
+        hasMapData: !!mapData,
+        mapDataKeys: mapData ? Object.keys(mapData) : null,
+        contentLength: content?.length
+      });
+    }
+  }, [role, intent, mapData, content]);
 
   // Handle the case where content might be nested in an object structure
   if (typeof content === 'object') {
@@ -137,6 +267,8 @@ const ChatMessage = ({ message, isLoading, onCitationClick, onFirstUserMessage }
   const [toast, setToast] = useState({ visible: false, message: '' });
   const [isPlaying, setIsPlaying] = useState(false);
   const [voices, setVoices] = useState([]);
+  const [showVisualization, setShowVisualization] = useState(false);
+  // const [showAutoGenVisual, setShowAutoGenVisual] = useState(false);
   const speechSynthRef = useRef(null);
 
   // Format citations properly, ensuring they're arrays
@@ -157,11 +289,34 @@ const ChatMessage = ({ message, isLoading, onCitationClick, onFirstUserMessage }
     ? formatDistanceToNow(new Date(timestamp), { addSuffix: true })
     : '';
 
-  // Check if the content contains special markers
+  // Check if the content contains special markers or quantitative data
   const hasSpecialContent = content && (
     content.includes('%%TABLE_JSON%%') || 
     content.includes('%%GRAPH_JSON%%')
   );
+  
+  // Extract graph data if available
+  const graphData = useMemo(() => 
+    content ? extractGraphData(content, '%%GRAPH_JSON%%') : null, 
+  [content]);
+  
+  const tableData = useMemo(() => 
+    content ? extractGraphData(content, '%%TABLE_JSON%%') : null, 
+  [content]);
+  
+  const isQuantitative = !isUser && !isLoading && (
+    (content && hasQuantitativeContent(content)) || 
+    intent === 'Quantitative' ||
+    !!mapData  // Consider mapData presence as indicator of quantitative content
+  );
+  
+  // Auto-generated visualization data
+  const autoGenVisualizationData = useMemo(() => {
+    if (isQuantitative && !hasSpecialContent && !mapData) {
+      return generateVisualizationData(content);
+    }
+    return null;
+  }, [content, isQuantitative, hasSpecialContent, mapData]);
 
   // Call onFirstUserMessage when this is a user message (to capture first message for sidebar)
   useEffect(() => {
@@ -359,38 +514,116 @@ const ChatMessage = ({ message, isLoading, onCitationClick, onFirstUserMessage }
     };
   }, [isPlaying]);
 
-  // Check if we have content to display
-  const hasContent = content && content.trim().length > 0;
+  /// Check if we have content to display
+// Check if we have content to display
+const hasContent = content && content.trim().length > 0;
 
-  return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4 w-full relative`}>
-      <div className={`max-w-3xl w-full rounded-lg p-4 ${
+// Calculate additional width for user messages (20px more than content length)
+const userMessageStyle = isUser ? {
+  maxWidth: `min(calc(100% + 30px), 90%)`, // Add 20px but cap at 90% of container
+  borderRadius: '24px', // More capsule-like
+} : {};
+
+return (
+  <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4 w-full relative`}>
+    <div 
+      style={userMessageStyle}
+      className={`${
         isUser 
-          ? 'bg-cyan-600 bg-opacity-80 text-white shadow-md' 
-          : 'bg-white bg-opacity-95 shadow text-gray-800'
-      }`}>
-        <div className="flex items-center mb-2">
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-            isUser 
-              ? 'bg-cyan-700 text-white' 
-              : 'bg-cyan-100 text-cyan-600'
-          }`}>
-            {isUser ? 'U' : 'AI'}
-          </div>
-          <div className="ml-2 font-medium">{isUser ? 'You' : 'Assistant'}</div>
-          {timestamp && <div className="ml-auto text-xs opacity-75">{formattedTime}</div>}
-          {intent && <div className="ml-2 text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full">{intent}</div>}
+          ? 'bg-cyan-600 bg-opacity-90 text-white shadow-lg rounded-3xl py-3 px-5' // Capsule/callout look
+          : 'bg-white backdrop-blur-sm bg-opacity-40 text-gray-800 rounded-lg p-4' // Glassmorphism
+      }`}
+    >
+      <div className="flex items-center mb-2">
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+          isUser 
+            ? 'bg-cyan-700 text-white' 
+            : 'bg-cyan-100 text-cyan-600'
+        }`}>
+          {isUser ? 'U' : 'AI'}
         </div>
-        <div className="prose max-w-full">
-          {isLoading && role === "assistant" ? (
-            <ReasoningLoader />
-          ) : hasContent ? (
-            <>
-              {hasSpecialContent ? (
-                <RichContent content={content} />
-              ) : (
-                <FormattedContent content={content} />
+        <div className="ml-2 font-medium">{isUser ? 'You' : 'Assistant'}</div>
+        {timestamp && <div className="ml-auto text-xs opacity-75">{formattedTime}</div>}
+        {intent && <div className="ml-2 text-xs bg-gray-200 text- px-2 py-1 rounded-full">{intent}</div>}
+      </div>
+      <div className={`prose max-w-full ${!isUser ? 'pl-2' : ''}`}>
+        {isLoading && role === "assistant" ? (
+          <ReasoningLoader />
+        ) : hasContent ? (
+          <>
+            {/* Use MarkdownRenderer if available, otherwise fall back to original renderers */}
+            {typeof MarkdownRenderer !== 'undefined' ? (
+              <MarkdownRenderer content={content} />
+            ) : hasSpecialContent ? (
+              <RichContent content={content} mapData={mapData} />
+            ) : (
+              <FormattedContent content={content} />
+            )}
+
+             {/* Start of visualization section */}
+              {!isUser && !isLoading && hasContent && (
+                <>
+                  {/* Primary visualization with mapData from backend */}
+
+{/* Primary visualization with mapData from backend */}
+{mapData && 
+  mapData.xAxis && 
+  mapData.yAxis && 
+  mapData.xAxis.data && 
+  mapData.yAxis.data && 
+  mapData.xAxis.data.length > 0 && 
+  mapData.yAxis.data.length > 0 && (
+  <div className="graph-container mt-4">
+    <button
+      onClick={() => setShowVisualization(!showVisualization)}
+      className="px-3 py-2 bg-gray-400 text-black rounded-md hover:bg-gray-100 transition-colors mb-2"
+    >
+      {showVisualization ? 'Hide Data Visualization' : 'Show Data Visualization'}
+    </button>
+    
+    {showVisualization && (
+      <div className="mt-2 visualization-wrapper">
+        <h3 className="text-lg font-medium mb-2">
+          {mapData.title || 'Data Visualization'}
+        </h3>
+        <GraphRenderer 
+          mapData={mapData} 
+          height={400} 
+          className="visualization-chart" 
+        />
+      </div>
+    )}
+  </div>
+)}
+                  {/* Fallback to extracted graph data if no mapData */}
+                  {!mapData && graphData && (
+                    <div className="graph-container mb-4">
+                      <button
+                        onClick={() => setShowVisualization(!showVisualization)}
+                        className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors mb-2"
+                      >
+                        {showVisualization ? 'Hide Chart Data' : 'Show Chart Data'}
+                      </button>
+                      
+                      {showVisualization && (
+                        <div className="mt-2">
+                          <h3 className="text-lg font-medium mb-2">Chart Data</h3>
+                          <GraphRenderer mapData={graphData} height={400} />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {
+
+                  }
+                  
+                  {
+                    
+                  }
+                </>
               )}
+              {/* End of visualization section */}
             </>
           ) : (
             <p className="text-gray-500 italic">No content available</p>

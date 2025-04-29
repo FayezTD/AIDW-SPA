@@ -41,13 +41,27 @@ export default class ChatService {
       }
 
       // Ensure model is a string and set a default if not valid
-      const modelValue = typeof model === 'string' && model ? model : 'gpt-4o-mini';
+      const modelValue = typeof model === 'string' && model ? model : 'o1-mini';
       
       console.log(`Sending message to model: ${modelValue}`);
 
+      // Check if the message might request visualization
+      // This helps prime the model for expected output format
+      const visualizationKeywords = ['chart', 'graph', 'visualize', 'plot', 'trend'];
+      const mightRequestVisualization = visualizationKeywords.some(keyword => 
+        message.toLowerCase().includes(keyword)
+      );
+
+      // Add visualization hint to the message if relevant
+      let enhancedMessage = message;
+      if (mightRequestVisualization) {
+        console.log('Visualization request detected, enhancing prompt');
+        enhancedMessage += '\n\nIf data visualization is needed, please format it as JSON with chartType, labels, datasets, etc.';
+      }
+
       // Create the payload according to the new format
       const payload = {
-        question: message,
+        question: enhancedMessage,
         model: modelValue,
         chat_history: chatHistory // Now expecting the proper chat_history format
       };
@@ -113,6 +127,9 @@ export default class ChatService {
     } else {
       finalAnswer = data.answer || '';
     }
+
+    // Process for visualizations in the response
+    finalAnswer = this.processVisualizationData(finalAnswer);
   
     // Extract citations and hyperlinks if they exist in the response
     let citations = [];
@@ -136,12 +153,20 @@ export default class ChatService {
     console.log('Processed citations:', processedCitations);
     console.log('Processed hyperlinks:', processedHyperlinks);
     
-    // Include intent in the return object if it exists
+    // Process map_data if present
+    let mapData = null;
+    if (data.map_data) {
+      console.log('Found map_data in response:', data.map_data);
+      mapData = data.map_data;
+    }
+    
+    // Include intent and map_data in the return object if they exist
     return {
       answer: finalAnswer,
       citations: processedCitations,
       hyperlinks: processedHyperlinks,
       intent: data.intent || null,
+      map_data: mapData,
       error: false
     };
   }
@@ -158,5 +183,46 @@ export default class ChatService {
       }
     });
     return result;
+  }
+
+  processVisualizationData(text) {
+    if (!text) return text;
+
+    try {
+      // Look for JSON data in the response that might be graph data
+      const jsonRegex = /```(?:json)?\s*({[\s\S]*?})```/g;
+      const matches = [...text.matchAll(jsonRegex)];
+      
+      // Process each match to see if it's valid graph data
+      for (const match of matches) {
+        try {
+          const jsonStr = match[1].trim();
+          const parsedJson = JSON.parse(jsonStr);
+          
+          // Check if this looks like a graph configuration
+          if (
+            parsedJson && 
+            (
+              (parsedJson.chartType && parsedJson.datasets) ||
+              (parsedJson.datasets && Array.isArray(parsedJson.datasets) && parsedJson.labels)
+            )
+          ) {
+            console.log('Found valid graph data:', parsedJson);
+            
+            // Replace the markdown JSON with our special graph tag
+            const graphTag = `%%GRAPH_JSON%%${JSON.stringify(parsedJson)}%%END_GRAPH%%`;
+            text = text.replace(match[0], graphTag);
+          }
+        } catch (parseError) {
+          console.warn('Failed to parse potential JSON data:', parseError);
+          // Continue checking other matches if this one failed
+        }
+      }
+
+      return text;
+    } catch (error) {
+      console.error('Error processing visualization data:', error);
+      return text; // Return original text if processing fails
+    }
   }
 }

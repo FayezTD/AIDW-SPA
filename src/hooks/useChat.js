@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '../components/auth/AuthProvider';
 import ChatService from '../services/chatService';
 import VisualizationService from '../services/visualizationService';
@@ -25,14 +25,37 @@ export function useChat(selectedModel) {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
- 
-  // Create chat service instance once
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const chatService = new ChatService();
+  const [chatService] = useState(() => new ChatService());
+  
+  // Add references for tracking chat session timing
+  const chatStartTimeRef = useRef(null);
+  const lastHistoryResetTimeRef = useRef(null);
+  
+  // Constants for time thresholds (in milliseconds)
+  const CHAT_HISTORY_RESET_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
   // Helper function to convert internal message format to the new chat_history format
   const convertMessagesToHistory = useCallback((messages) => {
     if (!messages || messages.length === 0) return [];
+    
+    // Check if we need to reset chat history based on time elapsed
+    const currentTime = new Date();
+    
+    // Initialize chat start time if this is the first message
+    if (!chatStartTimeRef.current) {
+      chatStartTimeRef.current = currentTime;
+      lastHistoryResetTimeRef.current = currentTime;
+    }
+    
+    // Calculate time since last history reset
+    const timeSinceLastReset = currentTime - lastHistoryResetTimeRef.current;
+    
+    // If it's been more than 5 minutes since the last reset, return empty history
+    if (timeSinceLastReset >= CHAT_HISTORY_RESET_INTERVAL) {
+      console.log('Resetting chat history due to 5-minute interval elapsed');
+      lastHistoryResetTimeRef.current = currentTime; // Update the last reset time
+      return []; // Return empty history to reset
+    }
     
     const chatHistory = [];
     
@@ -61,7 +84,7 @@ export function useChat(selectedModel) {
     }
     
     return chatHistory;
-  }, []);
+  }, [CHAT_HISTORY_RESET_INTERVAL]);
   
   // Helper function to format timestamp to HH:MM:SS
   const formatTime = (timestamp) => {
@@ -70,13 +93,93 @@ export function useChat(selectedModel) {
     return date.toTimeString().split(' ')[0];
   };
 
+  // Function to detect if a message potentially needs a visualization
+  const potentiallyNeedsVisualization = (message) => {
+    if (!message || typeof message !== 'string') return false;
+    
+    const visualTerms = [
+      'chart', 'graph', 'plot', 'visualize', 'visualization', 'trend',
+      'compare', 'comparison', 'statistic', 'data', 'metrics', 'analytics',
+      'dashboard', 'report'
+    ];
+    
+    const messageLower = message.toLowerCase();
+    return visualTerms.some(term => messageLower.includes(term));
+  };
+
+  // Helper function to extract graph data from response
+  const extractGraphData = useCallback((content) => {
+    if (!content) return content;
+    
+    try {
+      // Look for JSON in the response that might be graph data
+      const jsonRegex = /```(?:json)?\s*({[\s\S]*?})```/g;
+      const matches = [...content.matchAll(jsonRegex)];
+      
+      for (const match of matches) {
+        try {
+          const jsonStr = match[1].trim();
+          const parsedJson = JSON.parse(jsonStr);
+          
+          // Validate that this looks like graph data
+          if (
+            parsedJson && 
+            parsedJson.datasets && 
+            Array.isArray(parsedJson.datasets) &&
+            (parsedJson.chartType || parsedJson.labels)
+          ) {
+            console.log('Found valid graph data in response');
+            
+            // Replace the markdown JSON with our special graph tag
+            const graphTag = `%%GRAPH_JSON%%${JSON.stringify(parsedJson)}%%END_GRAPH%%`;
+            content = content.replace(match[0], graphTag);
+          }
+        } catch (parseError) {
+          console.warn('Failed to parse potential JSON:', parseError);
+        }
+      }
+      
+      return content;
+    } catch (error) {
+      console.error('Error extracting graph data:', error);
+      return content; // Return original content if processing fails
+    }
+  }, []);
+
+  // Function to clean and process the response content
+  const processResponseContent = useCallback((content) => {
+    try {
+      // Apply table formatting
+      let processedContent = ResponseFormatter.formatTables(content);
+      
+      // Apply visualization processing
+      processedContent = VisualizationService.processAllVisualizations(processedContent);
+      
+      // Apply additional graph extraction
+      processedContent = extractGraphData(processedContent);
+      
+      return processedContent;
+    } catch (error) {
+      console.error('Error processing response content:', error);
+      return content; // Return original content if processing fails
+    }
+  }, [extractGraphData]);
+
   const sendMessage = useCallback(async (content, model) => {
     if (!content.trim() || !isAuthenticated) return;
  
     const reasoningPayload = "Discuss in Details or Show in Tabular form or give reasoning";
-    const finalContent = selectedModel === 'o1-Preview'
-      ? `${content}\n${reasoningPayload}`
-      : content;
+    
+    // Add visualization hint if it seems like a visualization request
+    let finalContent = content;
+    if (potentiallyNeedsVisualization(content)) {
+      finalContent += "\n\nanswer in detailed response if necessary tabulate the response";
+    }
+    
+    // Add reasoning payload for o1-Preview model
+    if (selectedModel === 'o1-Preview') {
+      finalContent = `${finalContent}\n${reasoningPayload}`;
+    }
  
     const userMessage = {
       id: Date.now().toString(),
@@ -96,23 +199,36 @@ export function useChat(selectedModel) {
       const currentMessages = [...messages, userMessage];
       const chatHistory = convertMessagesToHistory(currentMessages);
       
+      // Log chat history size for debugging
+      console.log(`Sending chat history with ${chatHistory.length} entries`);
+      
       // Send message to service
       const response = await chatService.sendMessage(finalContent, model || selectedModel, chatHistory);
 
       if (response.error) {
         console.error("API error:", response.answer || response.error);
         setError(response.answer || "Error processing request");
+      } else if (response.cancelled) {
+        // Handle cancelled request gracefully
+        console.log("Request was cancelled");
       } else {
         // Process response
         let processedAnswer = response.answer || "I'm sorry, I couldn't generate a complete response at this time.";
         
-        // Apply formatters
-        processedAnswer = ResponseFormatter.formatTables(processedAnswer);
-        processedAnswer = VisualizationService.processAllVisualizations(processedAnswer);
+        // Process the content for various types of visualizations
+        processedAnswer = processResponseContent(processedAnswer);
  
         // Ensure we have arrays for citations and hyperlinks, even if empty
         const citations = response.citations || [];
         const hyperlinks = response.hyperlinks || [];
+
+
+        // Process map_data from response
+        let processedMapData = null;
+        if (response.map_data) {
+          console.log('Received map_data from API:', response.map_data);
+          processedMapData = response.map_data;
+        }
  
         // Create assistant message
         const assistantMessage = {
@@ -122,8 +238,18 @@ export function useChat(selectedModel) {
           citations: citations,
           hyperlinks: hyperlinks,
           intent: response.intent || 'General',
+          mapData: processedMapData, // Include processed mapData from the response
           timestamp: new Date()
         };
+
+
+        // Extra logging when mapData is present
+        if (processedMapData) {
+          console.log('Assistant message created with mapData:', {
+            intent: assistantMessage.intent,
+            mapDataKeys: Object.keys(processedMapData)
+          });
+        }
  
         // Update messages with assistant response
         setMessages(prevMessages => [...prevMessages, assistantMessage]);
@@ -134,7 +260,7 @@ export function useChat(selectedModel) {
     } finally {
       setIsLoading(false);
     }
-  }, [messages, chatService, isAuthenticated, user, selectedModel, convertMessagesToHistory]);
+  }, [messages, chatService, isAuthenticated, user, selectedModel, convertMessagesToHistory, processResponseContent]);
  
   const handleStarterQuestion = useCallback((question) => {
     sendMessage(question);
@@ -143,7 +269,19 @@ export function useChat(selectedModel) {
   const clearChat = useCallback(() => {
     setMessages([]);
     setError(null);
+    // Reset the chat timing references when clearing chat
+    chatStartTimeRef.current = null;
+    lastHistoryResetTimeRef.current = null;
   }, []);
+
+  // Cancel pending requests when component unmounts
+  useEffect(() => {
+    return () => {
+      if (chatService && typeof chatService.cancelAllRequests === 'function') {
+        chatService.cancelAllRequests();
+      }
+    };
+  }, [chatService]);
   
   return {
     messages,
