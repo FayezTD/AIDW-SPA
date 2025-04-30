@@ -140,44 +140,46 @@ const RichContent = ({ content, mapData }) => {
       {cleanedContent && <FormattedContent content={cleanedContent} />}
       
       {/* Visualization toggle button */}
-      {hasVisualization && (
-        <div className="visualization-controls mt-4">
-          <button
-            onClick={() => setShowVisualization(!showVisualization)}
-            className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-          >
-            {showVisualization ? 'Hide Visualization' : 'Show Visualization'}
-          </button>
-          
-          {/* Visualization container */}
-          {showVisualization && (
-            <div className="visualization-container mt-4">
-              {/* Priority to mapData if available */}
-              {mapData && (
-                <div className="graph-container mb-4">
-                  <h3 className="text-lg font-medium mb-2">Data Visualization</h3>
-                  <GraphRenderer mapData={mapData} height={400} />
-                </div>
-              )}
-              
-              {/* Fallback to extracted graph data if no mapData */}
-              {!mapData && graphData && (
-                <div className="graph-container mb-4">
-                  <h3 className="text-lg font-medium mb-2">Chart Data</h3>
-                  <GraphRenderer mapData={graphData} height={400} />
-                </div>
-              )}
-              
-              {tableData && (
-                <div className="table-container mb-4">
-                  <h3 className="text-lg font-medium mb-2">Table Data</h3>
-                  <TableRenderer data={tableData} />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+
+
+{hasVisualization && (
+  <div className="visualization-controls mt-4">
+    <button
+      onClick={() => setShowVisualization(!showVisualization)}
+      className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+    >
+      {showVisualization ? 'Hide Visualization' : 'Show Visualization'}
+    </button>
+    
+    {/* Visualization container */}
+    {showVisualization && (
+      <div className="visualization-container mt-4">
+        {/* Priority to mapData if available */}
+        {mapData && (
+          <div className="graph-container mb-4">
+            <h3 className="text-lg font-medium mb-2">Data Visualization</h3>
+            <GraphRenderer mapData={mapData} height={400} />
+          </div>
+        )}
+        
+        {/* Fallback to extracted graph data if no mapData */}
+        {!mapData && graphData && (
+          <div className="graph-container mb-4">
+            <h3 className="text-lg font-medium mb-2">Chart Data</h3>
+            <GraphRenderer mapData={graphData} height={400} />
+          </div>
+        )}
+        
+        {tableData && (
+          <div className="table-container mb-4">
+            <h3 className="text-lg font-medium mb-2">Table Data</h3>
+            <TableRenderer data={tableData} />
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+)}
     </div>
   );
 };
@@ -267,7 +269,7 @@ const ChatMessage = ({ message, isLoading, onCitationClick, onFirstUserMessage }
   const [toast, setToast] = useState({ visible: false, message: '' });
   const [isPlaying, setIsPlaying] = useState(false);
   const [voices, setVoices] = useState([]);
-  const [showVisualization, setShowVisualization] = useState(false);
+  const [showVisualization, setShowVisualization] = useState(true);
   // const [showAutoGenVisual, setShowAutoGenVisual] = useState(false);
   const speechSynthRef = useRef(null);
 
