@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '../components/auth/AuthProvider';
 import ChatService from '../services/chatService';
 import VisualizationService from '../services/visualizationService';
@@ -27,35 +27,13 @@ export function useChat(selectedModel) {
   const [error, setError] = useState(null);
   const [chatService] = useState(() => new ChatService());
   
-  // Add references for tracking chat session timing
-  const chatStartTimeRef = useRef(null);
-  const lastHistoryResetTimeRef = useRef(null);
-  
-  // Constants for time thresholds (in milliseconds)
-  const CHAT_HISTORY_RESET_INTERVAL = 5 * 60 * 1000; // 5 minutes
+  // Maximum number of chat history entries to include
+  const MAX_CHAT_HISTORY_ENTRIES = 5;
 
-  // Helper function to convert internal message format to the new chat_history format
+  // Helper function to convert internal message format to the chat_history format
+  // Modified to limit history to the most recent 5 exchanges
   const convertMessagesToHistory = useCallback((messages) => {
     if (!messages || messages.length === 0) return [];
-    
-    // Check if we need to reset chat history based on time elapsed
-    const currentTime = new Date();
-    
-    // Initialize chat start time if this is the first message
-    if (!chatStartTimeRef.current) {
-      chatStartTimeRef.current = currentTime;
-      lastHistoryResetTimeRef.current = currentTime;
-    }
-    
-    // Calculate time since last history reset
-    const timeSinceLastReset = currentTime - lastHistoryResetTimeRef.current;
-    
-    // If it's been more than 5 minutes since the last reset, return empty history
-    if (timeSinceLastReset >= CHAT_HISTORY_RESET_INTERVAL) {
-      console.log('Resetting chat history due to 5-minute interval elapsed');
-      lastHistoryResetTimeRef.current = currentTime; // Update the last reset time
-      return []; // Return empty history to reset
-    }
     
     const chatHistory = [];
     
@@ -78,13 +56,28 @@ export function useChat(selectedModel) {
           time: formatTime(userMessage.timestamp)
         };
         
+        // Explicitly exclude map_data from chat history
+        // (map_data is already not included in this conversion function)
+        
         chatHistory.push(historyEntry);
         i++; // Skip the assistant message we just processed
       }
     }
     
-    return chatHistory;
-  }, [CHAT_HISTORY_RESET_INTERVAL]);
+    // Only return the most recent MAX_CHAT_HISTORY_ENTRIES entries
+    const limitedHistory = chatHistory.slice(-MAX_CHAT_HISTORY_ENTRIES);
+    
+    console.log(`Chat history limited to ${limitedHistory.length} entries (max: ${MAX_CHAT_HISTORY_ENTRIES})`);
+    
+    // If we have exactly MAX_CHAT_HISTORY_ENTRIES entries, reset the history
+    // This ensures the next message after 5 exchanges will have an empty history
+    if (limitedHistory.length >= MAX_CHAT_HISTORY_ENTRIES) {
+      console.log('Reached max chat history entries, returning empty history for reset');
+      return [];
+    }
+    
+    return limitedHistory;
+  }, [MAX_CHAT_HISTORY_ENTRIES]);
   
   // Helper function to format timestamp to HH:MM:SS
   const formatTime = (timestamp) => {
@@ -222,7 +215,6 @@ export function useChat(selectedModel) {
         const citations = response.citations || [];
         const hyperlinks = response.hyperlinks || [];
 
-
         // Process map_data from response
         let processedMapData = null;
         if (response.map_data) {
@@ -238,10 +230,9 @@ export function useChat(selectedModel) {
           citations: citations,
           hyperlinks: hyperlinks,
           intent: response.intent || 'General',
-          mapData: processedMapData, // Include processed mapData from the response
+          mapData: processedMapData, // Include processed mapData in the UI message
           timestamp: new Date()
         };
-
 
         // Extra logging when mapData is present
         if (processedMapData) {
@@ -269,9 +260,6 @@ export function useChat(selectedModel) {
   const clearChat = useCallback(() => {
     setMessages([]);
     setError(null);
-    // Reset the chat timing references when clearing chat
-    chatStartTimeRef.current = null;
-    lastHistoryResetTimeRef.current = null;
   }, []);
 
   // Cancel pending requests when component unmounts
