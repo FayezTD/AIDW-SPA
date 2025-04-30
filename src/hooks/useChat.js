@@ -15,8 +15,8 @@ export const STARTER_QUESTIONS = [
     question: 'Explain the Use Azure Kubernetes Service to host GPU-based workloads?'
   },
   {
-    id: 'azure-form-recognizer',
-    question: 'What are the resiliency patterns mentioned in Azure architectural designs? Tabularise the response.'
+    id: 'data-lake-trend',
+    question: 'Show trends for monthly variations in Azure data or Azure Data Lake usage.'
   }
 ]; 
 
@@ -161,12 +161,12 @@ export function useChat(selectedModel) {
   const sendMessage = useCallback(async (content, model) => {
     if (!content.trim() || !isAuthenticated) return;
  
-    const reasoningPayload = "Discuss in Details or Show in Tabular form or give reasoning";
+    const reasoningPayload = "";
     
     // Add visualization hint if it seems like a visualization request
     let finalContent = content;
     if (potentiallyNeedsVisualization(content)) {
-      finalContent += "\n\nanswer in detailed response if necessary tabulate the response";
+      finalContent += "";
     }
     
     // Add reasoning payload for o1-Preview model

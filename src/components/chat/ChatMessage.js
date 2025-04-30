@@ -516,7 +516,7 @@ const ChatMessage = ({ message, isLoading, onCitationClick, onFirstUserMessage }
     };
   }, [isPlaying]);
 
-  /// Check if we have content to display
+  
 // Check if we have content to display
 const hasContent = content && content.trim().length > 0;
 
@@ -532,15 +532,15 @@ return (
       style={userMessageStyle}
       className={`${
         isUser 
-          ? 'bg-cyan-600 bg-opacity-90 text-white shadow-lg rounded-3xl py-3 px-5' // Capsule/callout look
-          : 'bg-white backdrop-blur-sm bg-opacity-40 text-gray-800 rounded-lg p-4' // Glassmorphism
+          ? 'bg-yellow-50 bg-opacity-90 text-black shadow-lg rounded-3xl py-3 px-5' // Capsule/callout look with white text
+          : 'bg-white backdrop-blur-sm bg-opacity-40 text-black rounded-lg p-4' // Glassmorphism with black text
       }`}
     >
       <div className="flex items-center mb-2">
         <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
           isUser 
-            ? 'bg-cyan-700 text-white' 
-            : 'bg-cyan-100 text-cyan-600'
+            ? 'bg-cyan-700 text-cyan-100' 
+            : 'bg-cyan-100 text-cyan-900'
         }`}>
           {isUser ? 'U' : 'AI'}
         </div>

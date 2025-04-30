@@ -56,7 +56,7 @@ export default class ChatService {
       let enhancedMessage = message;
       if (mightRequestVisualization) {
         console.log('Visualization request detected, enhancing prompt');
-        enhancedMessage += '\n\nIf data visualization line and bar chart  is needed,also see if the u can tabulate the data  ';
+        enhancedMessage += '';
       }
 
       // Create the payload according to the new format
