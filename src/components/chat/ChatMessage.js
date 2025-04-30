@@ -157,7 +157,7 @@ const RichContent = ({ content, mapData }) => {
         {/* Priority to mapData if available */}
         {mapData && (
           <div className="graph-container mb-4">
-            <h3 className="text-lg font-medium mb-2">Data Visualization</h3>
+            <h3 className="text-lg font-small mb-2"> Metric Analysis</h3>
             <GraphRenderer mapData={mapData} height={400} />
           </div>
         )}
@@ -586,7 +586,7 @@ return (
     {showVisualization && (
       <div className="mt-2 visualization-wrapper">
         <h3 className="text-lg font-medium mb-2">
-          {mapData.title || 'Data Visualization'}
+          {mapData.title || 'Metric Analysis'}
         </h3>
         <GraphRenderer 
           mapData={mapData} 

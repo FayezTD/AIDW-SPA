@@ -47,7 +47,7 @@ export default class ChatService {
 
       // Check if the message might request visualization
       // This helps prime the model for expected output format
-      const visualizationKeywords = ['chart', 'graph', 'visualize', 'plot', 'trend'];
+      const visualizationKeywords = ['chart', 'graph', 'visualize', 'plot', 'trend','trends','metric','plot','analytics', 'analyze','tabulate' ,'number','how many'];
       const mightRequestVisualization = visualizationKeywords.some(keyword => 
         message.toLowerCase().includes(keyword)
       );
@@ -56,7 +56,7 @@ export default class ChatService {
       let enhancedMessage = message;
       if (mightRequestVisualization) {
         console.log('Visualization request detected, enhancing prompt');
-        enhancedMessage += '\n\nIf data visualization is needed, please format it as JSON with chartType, labels, datasets, etc.';
+        enhancedMessage += '\n\nIf data visualization line and bar chart  is needed,also see if the u can tabulate the data  ';
       }
 
       // Create the payload according to the new format
