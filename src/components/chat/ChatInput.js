@@ -4,7 +4,7 @@ import ModelSelector from './ModelSelector';
 const ChatInput = ({ onSendMessage, isLoading }) => {
   const [message, setMessage] = useState('');
   const [isListening, setIsListening] = useState(false);
-  const [selectedModel, setSelectedModel] = useState('o1-mini');
+  const [selectedModel, setSelectedModel] = useState('gpt-4o-mini');
   const textareaRef = useRef(null);
   const sendButtonRef = useRef(null);
   const voiceButtonRef = useRef(null);

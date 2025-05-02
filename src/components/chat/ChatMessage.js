@@ -573,8 +573,8 @@ return (
   mapData.yAxis && 
   mapData.xAxis.data && 
   mapData.yAxis.data && 
-  mapData.xAxis.data.length > 0 && 
-  mapData.yAxis.data.length > 0 && (
+  mapData.xAxis.data.length > 1 && 
+  mapData.yAxis.data.length > 1 && (
   <div className="graph-container mt-4">
     <button
       onClick={() => setShowVisualization(!showVisualization)}

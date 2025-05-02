@@ -41,7 +41,7 @@ export default class ChatService {
       }
 
       // Ensure model is a string and set a default if not valid
-      const modelValue = typeof model === 'string' && model ? model : 'o1-mini';
+      const modelValue = typeof model === 'string' && model ? model : 'gpt-4o-mini';
       
       console.log(`Sending message to model: ${modelValue}`);
 
