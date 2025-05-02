@@ -248,7 +248,7 @@ const ChatMessage = ({ message, isLoading, onCitationClick, onFirstUserMessage }
   // Debug log message structure when it's an assistant message with potential visualization data
   useEffect(() => {
     if (role === 'assistant' && (intent === 'Quantitative' || mapData)) {
-      console.log('Assistant message with potential visualization:', {
+      console.log('Assistant message with potential visualization', {
         intent,
         hasMapData: !!mapData,
         mapDataKeys: mapData ? Object.keys(mapData) : null,
