@@ -8,10 +8,28 @@ const GraphRenderer = ({ mapData, height = 400, width = '100%', className = '' }
   const [chartType, setChartType] = useState('bar');
   const [error, setError] = useState(null);
   const chartRef = useRef(null);
+  // New state for tracking active filters
+  const [activeFilters, setActiveFilters] = useState({});
+  // New state for tracking if all filters are disabled (show all data)
+  const [showAllData, setShowAllData] = useState(true);
   
   // Debug the incoming data
   useEffect(() => {
     console.log('GraphRenderer received mapData:', mapData);
+  }, [mapData]);
+  
+  // Initialize filters when mapData changes
+  useEffect(() => {
+    if (mapData && mapData.series && Array.isArray(mapData.series)) {
+      const initialFilters = {};
+      mapData.series.forEach(series => {
+        if (series.name) {
+          initialFilters[series.name] = true;
+        }
+      });
+      setActiveFilters(initialFilters);
+      setShowAllData(true);
+    }
   }, [mapData]);
   
   // Process data for recharts from map_data format
@@ -43,7 +61,10 @@ const GraphRenderer = ({ mapData, height = 400, width = '100%', className = '' }
             // Add values from each series
             mapData.series.forEach(series => {
               if (series.name && Array.isArray(series.data)) {
-                dataPoint[series.name] = series.data[idx] || 0;
+                // Only add series that are currently active based on filters
+                if (showAllData || activeFilters[series.name]) {
+                  dataPoint[series.name] = series.data[idx] || 0;
+                }
               }
             });
             
@@ -54,14 +75,17 @@ const GraphRenderer = ({ mapData, height = 400, width = '100%', className = '' }
         // For pie chart - transform series data into pie format
         mapData.series.forEach(series => {
           if (series.name && Array.isArray(series.data)) {
-            const total = series.data.reduce((sum, val) => sum + (val || 0), 0);
-            
-            // Only include if there's actual data
-            if (total > 0) {
-              formattedData.push({
-                name: series.name,
-                value: total
-              });
+            // Only include series that are active in the filter
+            if (showAllData || activeFilters[series.name]) {
+              const total = series.data.reduce((sum, val) => sum + (val || 0), 0);
+              
+              // Only include if there's actual data
+              if (total > 0) {
+                formattedData.push({
+                  name: series.name,
+                  value: total
+                });
+              }
             }
           }
         });
@@ -128,7 +152,39 @@ const GraphRenderer = ({ mapData, height = 400, width = '100%', className = '' }
       setError('Failed to process chart data: ' + err.message);
       return null;
     }
-  }, [mapData]);
+  }, [mapData, activeFilters, showAllData]);
+
+  // Function to handle filter toggle
+  const toggleFilter = (seriesName) => {
+    const newActiveFilters = { ...activeFilters };
+    
+    // If all filters are on (showing all data), turn all off except the clicked one
+    if (showAllData) {
+      Object.keys(newActiveFilters).forEach(key => {
+        newActiveFilters[key] = key === seriesName;
+      });
+      setShowAllData(false);
+    } 
+    // If we're in filtered mode
+    else {
+      // Check if we're toggling the only active filter
+      const currentlyActive = Object.values(newActiveFilters).filter(Boolean).length;
+      
+      if (currentlyActive === 1 && newActiveFilters[seriesName]) {
+        // If this is the only active filter and we're clicking it, show all
+        Object.keys(newActiveFilters).forEach(key => {
+          newActiveFilters[key] = true;
+        });
+        setShowAllData(true);
+      } else {
+        // Otherwise toggle just this filter
+        newActiveFilters[seriesName] = !newActiveFilters[seriesName];
+        setShowAllData(false);
+      }
+    }
+    
+    setActiveFilters(newActiveFilters);
+  };
 
   // Responsive button styles
   const buttonBaseClass = "px-3 py-2 mx-1 my-2 rounded-md text-sm font-medium transition-all duration-200";
@@ -141,6 +197,11 @@ const GraphRenderer = ({ mapData, height = 400, width = '100%', className = '' }
     '#00C49F', '#FFBB28', '#FF8042', '#6C8EBF', '#B85450',
     '#D79B00', '#6A00FF', '#008B8B', '#DC143C', '#2F4F4F'
   ];
+  
+  // Get filter button color by index
+  const getFilterButtonColor = (index) => {
+    return COLORS[index % COLORS.length];
+  };
   
   // Custom tooltip component
   const CustomTooltip = ({ active, payload, label }) => {
@@ -159,50 +220,50 @@ const GraphRenderer = ({ mapData, height = 400, width = '100%', className = '' }
   };
 
   // Pie chart custom label renderer - positioned outside the chart with connecting lines
-const renderCustomizedPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name, value }) => {
-  const RADIAN = Math.PI / 180;
-  // Position labels 1.5x away from the outer radius
-  const radius = outerRadius * 1.5;
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-  
-  // Calculate intermediate point for the connecting line
-  const lineStart = {
-    x: cx + outerRadius * Math.cos(-midAngle * RADIAN),
-    y: cy + outerRadius * Math.sin(-midAngle * RADIAN)
+  const renderCustomizedPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name, value }) => {
+    const RADIAN = Math.PI / 180;
+    // Position labels 1.5x away from the outer radius
+    const radius = outerRadius * 1.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    
+    // Calculate intermediate point for the connecting line
+    const lineStart = {
+      x: cx + outerRadius * Math.cos(-midAngle * RADIAN),
+      y: cy + outerRadius * Math.sin(-midAngle * RADIAN)
+    };
+    
+    return (
+      <g>
+        {/* Connecting line from pie slice to label */}
+        <line 
+          x1={lineStart.x}
+          y1={lineStart.y}
+          x2={x}
+          y2={y}
+          stroke="#999"
+          strokeWidth={1}
+          strokeDasharray="2,2" // Dotted line
+        />
+        
+        {/* Label text */}
+        <text 
+          x={x}
+          y={y}
+          fill="#999" 
+          textAnchor={x > cx ? 'start' : 'end'} 
+          dominantBaseline="central"
+          fontSize={12}
+          fontFamily="monospace"
+          letterSpacing="0.5px"
+          style={{ fontWeight: 300, opacity: 0.8 }}
+          dx={x > cx ? 5 : -5} // Add a small offset to prevent text touching the line
+        >
+          {`${name}: ${(percent * 100).toFixed(0)}%`}
+        </text>
+      </g>
+    );
   };
-  
-  return (
-    <g>
-      {/* Connecting line from pie slice to label */}
-      <line 
-        x1={lineStart.x}
-        y1={lineStart.y}
-        x2={x}
-        y2={y}
-        stroke="#999"
-        strokeWidth={1}
-        strokeDasharray="2,2" // Dotted line
-      />
-      
-      {/* Label text */}
-      <text 
-        x={x}
-        y={y}
-        fill="#999" 
-        textAnchor={x > cx ? 'start' : 'end'} 
-        dominantBaseline="central"
-        fontSize={12}
-        fontFamily="monospace"
-        letterSpacing="0.5px"
-        style={{ fontWeight: 300, opacity: 0.8 }}
-        dx={x > cx ? 5 : -5} // Add a small offset to prevent text touching the line
-      >
-        {`${name}: ${(percent * 100).toFixed(0)}%`}
-      </text>
-    </g>
-  );
-};
 
   // Empty state component
   const renderEmptyState = () => (
@@ -242,6 +303,35 @@ const renderCustomizedPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, 
     );
   };
 
+  // New component for series filters
+  const renderSeriesFilters = () => {
+    if (!processedData || !processedData.series || processedData.series.length <= 1) {
+      return null;
+    }
+    
+    return (
+      <div className="series-filters mt-2 mb-4">
+        <div className="flex flex-wrap justify-center gap-2">
+          {processedData.series.map((series, index) => (
+            <button
+              key={series.name}
+              onClick={() => toggleFilter(series.name)}
+              className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center ${showAllData || activeFilters[series.name] ? 'text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              style={{ 
+                backgroundColor: (showAllData || activeFilters[series.name]) ? getFilterButtonColor(index) : undefined,
+                opacity: (showAllData || activeFilters[series.name]) ? 1 : 0.7,
+                border: `1px solid ${getFilterButtonColor(index)}`
+              }}
+            >
+              <span className="w-3 h-3 mr-2 rounded-sm" style={{ backgroundColor: getFilterButtonColor(index) }}></span>
+              {series.name}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   // Render function for different chart types
   const renderChart = () => {
     if (!processedData || !processedData.formattedData || processedData.formattedData.length === 0) {
@@ -250,6 +340,9 @@ const renderCustomizedPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, 
 
     try {
       const { formattedData, isMultiSeries, series, xAxisLabel, yAxisLabel } = processedData;
+      
+      // Filter series by active filters
+      const filteredSeries = series.filter(s => showAllData || activeFilters[s.name]);
       
       switch (chartType) {
         case 'pie':
@@ -272,6 +365,7 @@ const renderCustomizedPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, 
                 </Pie>
                 <Tooltip content={<CustomTooltip />} />
                 <Legend layout="vertical" verticalAlign="middle" align="right" />
+                {/* Hide the default legend since we have filter buttons */}
               </PieChart>
             </ResponsiveContainer>
           );
@@ -296,12 +390,13 @@ const renderCustomizedPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, 
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend verticalAlign="top" height={36} />
-                  {series.map((s, index) => (
+                  {/* Hide the default legend since we have filter buttons */}
+                  {filteredSeries.map((s, index) => (
                     <Line
                       key={s.name}
                       type="monotone"
                       dataKey={s.name}
-                      stroke={COLORS[index % COLORS.length]}
+                      stroke={COLORS[series.findIndex(seriesItem => seriesItem.name === s.name) % COLORS.length]}
                       strokeWidth={2}
                       dot={{ r: 4, strokeWidth: 2 }}
                       activeDot={{ r: 6, strokeWidth: 0 }}
@@ -330,6 +425,7 @@ const renderCustomizedPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, 
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend verticalAlign="top" height={36} />
+                  {/* Hide the default legend since we have filter buttons */}
                   <Line 
                     type="monotone"
                     dataKey="value"
@@ -365,11 +461,12 @@ const renderCustomizedPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, 
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend verticalAlign="top" height={36} />
-                  {series.map((s, index) => (
+                  {/* Hide the default legend since we have filter buttons */}
+                  {filteredSeries.map((s, index) => (
                     <Bar
                       key={s.name}
                       dataKey={s.name}
-                      fill={COLORS[index % COLORS.length]}
+                      fill={COLORS[series.findIndex(seriesItem => seriesItem.name === s.name) % COLORS.length]}
                       radius={[4, 4, 0, 0]}
                       barSize={20}
                       name={s.name}
@@ -397,6 +494,7 @@ const renderCustomizedPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, 
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend verticalAlign="top" height={36} />
+                  {/* Hide the default legend since we have filter buttons */}
                   <Bar 
                     dataKey="value"
                     fill={COLORS[0]}
@@ -423,6 +521,7 @@ const renderCustomizedPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, 
     <div className={`graph-renderer bg-white rounded-lg shadow-md p-4 ${className}`}>
       <div className="chart-controls-container">
         {renderChartSelector()}
+        {renderSeriesFilters()}
       </div>
       
       {error ? (
