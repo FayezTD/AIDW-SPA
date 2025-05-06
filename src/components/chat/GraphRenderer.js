@@ -158,26 +158,51 @@ const GraphRenderer = ({ mapData, height = 400, width = '100%', className = '' }
     );
   };
 
-  // Pie chart custom label renderer
-  const renderCustomizedPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name, value }) => {
-    const RADIAN = Math.PI / 180;
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-    
-    return (
+  // Pie chart custom label renderer - positioned outside the chart with connecting lines
+const renderCustomizedPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name, value }) => {
+  const RADIAN = Math.PI / 180;
+  // Position labels 1.5x away from the outer radius
+  const radius = outerRadius * 1.5;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  
+  // Calculate intermediate point for the connecting line
+  const lineStart = {
+    x: cx + outerRadius * Math.cos(-midAngle * RADIAN),
+    y: cy + outerRadius * Math.sin(-midAngle * RADIAN)
+  };
+  
+  return (
+    <g>
+      {/* Connecting line from pie slice to label */}
+      <line 
+        x1={lineStart.x}
+        y1={lineStart.y}
+        x2={x}
+        y2={y}
+        stroke="#999"
+        strokeWidth={1}
+        strokeDasharray="2,2" // Dotted line
+      />
+      
+      {/* Label text */}
       <text 
-        x={x} 
-        y={y} 
-        fill="#333" 
+        x={x}
+        y={y}
+        fill="#999" 
         textAnchor={x > cx ? 'start' : 'end'} 
         dominantBaseline="central"
         fontSize={12}
+        fontFamily="monospace"
+        letterSpacing="0.5px"
+        style={{ fontWeight: 300, opacity: 0.8 }}
+        dx={x > cx ? 5 : -5} // Add a small offset to prevent text touching the line
       >
         {`${name}: ${(percent * 100).toFixed(0)}%`}
       </text>
-    );
-  };
+    </g>
+  );
+};
 
   // Empty state component
   const renderEmptyState = () => (
