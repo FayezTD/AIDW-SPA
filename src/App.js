@@ -6,6 +6,7 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AuthProvider } from './components/auth/AuthProvider';
 import { MsalProvider } from '@azure/msal-react';
 import { msalInstance } from './components/auth/msalConfig';
+import AuthDebugComponent from './components/auth/msalConfig';
 
 import './index.css';
 
@@ -28,6 +29,7 @@ const App = () => {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
+        <AuthDebugComponent />
       </AuthProvider>
     </MsalProvider>
   );
